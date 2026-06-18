@@ -1,0 +1,6 @@
+{
+  "poll_interval_minutes": 2.5,
+  "database_path": "db/macd_history.db",
+  "momentum_threshold": 4.5,
+  "min_macd_increase_alert": 0.2
+}
