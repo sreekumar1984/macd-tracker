@@ -18,9 +18,9 @@ echo "Activating virtual environment..."
 source venv/bin/activate
 
 # Install dependencies
-echo "Installing dependencies (requests)..."
+echo "Installing dependencies (requirements.txt)..."
 pip install --upgrade pip -q
-pip install requests -q
+pip install -r requirements.txt -q
 
 echo "=========================================================="
 echo "🚀 Starting MACD Momentum Tracker Daemon..."
