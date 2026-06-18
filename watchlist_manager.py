@@ -3,7 +3,8 @@ import json
 import os
 import requests
 
-WATCHLIST_PATH = "/Users/sree/macd_momentum_tracker/watchlist.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+WATCHLIST_PATH = os.path.join(BASE_DIR, "watchlist.json")
 
 def fetch_and_initialize_fo_list():
     # We fetch it fresh every time or load if exists and force_fresh is False

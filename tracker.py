@@ -15,7 +15,8 @@ import watchlist_manager
 import analyzer
 import bhavcopy_scraper
 
-CONFIG_PATH = "/Users/sree/macd_momentum_tracker/config.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 LAST_EOD_RUN_DATE = None
 WATCHLIST = []
 DB_WRITE_LOCK = threading.Lock()
@@ -70,7 +71,7 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
             self.end_headers()
-            dashboard_file = "/Users/sree/macd_momentum_tracker/alerts_dashboard.html"
+            dashboard_file = os.path.join(BASE_DIR, "alerts_dashboard.html")
             if os.path.exists(dashboard_file):
                 with open(dashboard_file, "rb") as f:
                     self.wfile.write(f.read())

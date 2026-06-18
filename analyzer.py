@@ -6,9 +6,10 @@ from datetime import datetime, timedelta
 # Import local db manager
 import db_manager
 
-CONFIG_PATH = "/Users/sree/macd_momentum_tracker/config.json"
-ALERTS_LOG_PATH = "/Users/sree/macd_momentum_tracker/alerts.log"
-DASHBOARD_PATH = "/Users/sree/macd_momentum_tracker/alerts_dashboard.html"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+ALERTS_LOG_PATH = os.path.join(BASE_DIR, "alerts.log")
+DASHBOARD_PATH = os.path.join(BASE_DIR, "alerts_dashboard.html")
 
 def load_config():
     try:
@@ -19,7 +20,7 @@ def load_config():
 
 def has_alert_today(symbol, alert_type):
     today = datetime.now().strftime("%Y-%m-%d")
-    db_path = "/Users/sree/macd_momentum_tracker/db/macd_history.db"
+    db_path = os.path.join(BASE_DIR, "db/macd_history.db")
     if not os.path.exists(db_path):
         return False
     conn = sqlite3.connect(db_path)
@@ -399,7 +400,7 @@ def run_eod_retrospective(date_str=None):
 
 def generate_dashboard(symbols):
     config = load_config()
-    db_path = "/Users/sree/macd_momentum_tracker/db/macd_history.db"
+    db_path = os.path.join(BASE_DIR, "db/macd_history.db")
     
     if not os.path.exists(db_path):
         return

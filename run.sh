@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Navigate to the project directory
-cd /Users/sree/macd_momentum_tracker
+cd "$(dirname "$0")"
 
 echo "=========================================================="
 echo "📦 Setting up isolated environment for MACD Momentum Tracker..."
