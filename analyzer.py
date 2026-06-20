@@ -76,7 +76,7 @@ def analyze_all_symbols(symbols):
     for symbol in symbols:
         # Fetch the last 2 records
         cursor.execute("""
-            SELECT timestamp, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct
+            SELECT timestamp, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day
             FROM macd_records
             WHERE symbol = ?
             ORDER BY timestamp DESC
@@ -90,8 +90,8 @@ def analyze_all_symbols(symbols):
         latest = rows[0]
         previous = rows[1]
         
-        lat_time, lat_price, lat_day_change, lat_macd, lat_signal, lat_hist, lat_rsi, lat_vol, lat_avg_vol, lat_ce_oi, lat_pe_oi, lat_pcr, lat_fut_oi, lat_fut_oi_chg = latest
-        prev_time, prev_price, prev_day_change, prev_macd, prev_signal, prev_hist, prev_rsi, prev_vol, prev_avg_vol, prev_ce_oi, prev_pe_oi, prev_pcr, prev_fut_oi, prev_fut_oi_chg = previous
+        lat_time, lat_price, lat_day_change, lat_macd, lat_signal, lat_hist, lat_rsi, lat_vol, lat_avg_vol, lat_ce_oi, lat_pe_oi, lat_pcr, lat_fut_oi, lat_fut_oi_chg, lat_rsi_30, lat_rsi_60, lat_macd_day, lat_macd_signal_day, lat_macd_hist_day, lat_rsi_day = latest
+        prev_time, prev_price, prev_day_change, prev_macd, prev_signal, prev_hist, prev_rsi, prev_vol, prev_avg_vol, prev_ce_oi, prev_pe_oi, prev_pcr, prev_fut_oi, prev_fut_oi_chg, prev_rsi_30, prev_rsi_60, prev_macd_day, prev_macd_signal_day, prev_macd_hist_day, prev_rsi_day = previous
         
         if None in (lat_macd, lat_signal, lat_hist, prev_macd, prev_signal, prev_hist):
             continue
@@ -161,7 +161,13 @@ def analyze_all_symbols(symbols):
                 "total_pe_oi": lat_pe_oi,
                 "pcr": lat_pcr,
                 "futures_oi": lat_fut_oi,
-                "futures_oi_change_pct": lat_fut_oi_chg
+                "futures_oi_change_pct": lat_fut_oi_chg,
+                "rsi_30": lat_rsi_30,
+                "rsi_60": lat_rsi_60,
+                "macd_day": lat_macd_day,
+                "macd_signal_day": lat_macd_signal_day,
+                "macd_hist_day": lat_macd_hist_day,
+                "rsi_day": lat_rsi_day
             }
             alerts_triggered.append(alert)
             
@@ -193,7 +199,13 @@ def analyze_all_symbols(symbols):
                     "total_pe_oi": lat_pe_oi,
                     "pcr": lat_pcr,
                     "futures_oi": lat_fut_oi,
-                    "futures_oi_change_pct": lat_fut_oi_chg
+                    "futures_oi_change_pct": lat_fut_oi_chg,
+                    "rsi_30": lat_rsi_30,
+                    "rsi_60": lat_rsi_60,
+                    "macd_day": lat_macd_day,
+                    "macd_signal_day": lat_macd_signal_day,
+                    "macd_hist_day": lat_macd_hist_day,
+                    "rsi_day": lat_rsi_day
                 }
                 alerts_triggered.append(dry_alert)
                 with open(ALERTS_LOG_PATH, "a") as f_log:
@@ -226,7 +238,13 @@ def analyze_all_symbols(symbols):
                 a.get("total_pe_oi"),
                 a.get("pcr"),
                 a.get("futures_oi"),
-                a.get("futures_oi_change_pct")
+                a.get("futures_oi_change_pct"),
+                a.get("rsi_30"),
+                a.get("rsi_60"),
+                a.get("macd_day"),
+                a.get("macd_signal_day"),
+                a.get("macd_hist_day"),
+                a.get("rsi_day")
             ))
         db_manager.insert_alerts(db_alerts)
 
@@ -415,7 +433,7 @@ def generate_dashboard(symbols):
     latest_snapshot = []
     for symbol in symbols:
         cursor.execute("""
-            SELECT timestamp, price, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, day_change
+            SELECT timestamp, price, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, day_change, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day
             FROM macd_records
             WHERE symbol = ?
             ORDER BY timestamp DESC
@@ -594,7 +612,7 @@ def generate_dashboard(symbols):
             continue
             
         latest = rows[0]
-        t_stamp, s_price, s_macd, s_sig, s_hist, s_rsi, s_vol, s_avg_vol, s_ce_oi, s_pe_oi, s_pcr, s_fut_oi, s_fut_oi_chg, s_day_chg = latest
+        t_stamp, s_price, s_macd, s_sig, s_hist, s_rsi, s_vol, s_avg_vol, s_ce_oi, s_pe_oi, s_pcr, s_fut_oi, s_fut_oi_chg, s_day_chg, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day = latest
         
         # Format daily price change
         day_chg_str = "—"
@@ -736,7 +754,7 @@ def generate_dashboard(symbols):
         if is_dryup:
             # We store the required elements for the Dry-up Tab row
             dryup_list.append((
-                sym, s_price, s_macd, s_sig, s_hist, trend_str, trend_style, rsi_str, rsi_style, s_vol, s_avg_vol, (s_vol / s_avg_vol) * 100, vol_ratio_style, interp, interp_style
+                sym, s_price, s_macd, s_sig, s_hist, trend_str, trend_style, rsi_str, rsi_style, s_vol, s_avg_vol, (s_vol / s_avg_vol) * 100, vol_ratio_style, interp, interp_style, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day
             ))
             
         macd_color = "#22c55e" if s_macd > config["momentum_threshold"] else "#cbd5e1"
@@ -763,21 +781,27 @@ def generate_dashboard(symbols):
 
         snapshot_rows += f"""
         <tr>
-            <td style="font-weight: bold; color: #fff;">{sym}</td>
-            <td>₹{s_price:.2f}</td>
-            <td style="{day_chg_style}">{day_chg_str}</td>
-            <td style="color: {macd_color}; font-weight: bold;">{s_macd:.3f}</td>
-            <td>{s_sig:.3f}</td>
-            <td style="color: {hist_color}; font-weight: bold;">{s_hist:.3f}</td>
-            <td style="{trend_style}">{trend_str}</td>
-            <td style="{rsi_style}">{rsi_str}</td>
-            <td>{fmt_vol(s_vol)}</td>
-            <td>{fmt_vol(s_avg_vol)}</td>
-            <td style="{vol_ratio_style}">{vol_ratio_str}</td>
-            <td style="{pcr_style}">{pcr_str}</td>
-            <td>{fut_oi_str}</td>
-            <td style="{oi_chg_style}">{oi_chg_str}</td>
-            <td style="{interp_style}">{interp}</td>
+            <td class="col-symbol" style="font-weight: bold; color: #fff;">{sym}</td>
+            <td class="col-price">₹{s_price:.2f}</td>
+            <td class="col-day_change" style="{day_chg_style}">{day_chg_str}</td>
+            <td class="col-macd_15" style="color: {macd_color}; font-weight: bold;">{s_macd:.3f}</td>
+            <td class="col-signal_15">{s_sig:.3f}</td>
+            <td class="col-hist_15" style="color: {hist_color}; font-weight: bold;">{s_hist:.3f}</td>
+            <td class="col-trend" style="{trend_style}">{trend_str}</td>
+            <td class="col-rsi_15" style="{rsi_style}">{rsi_str}</td>
+            <td class="col-rsi_30">{f"{s_rsi_30:.2f}" if s_rsi_30 is not None else "—"}</td>
+            <td class="col-rsi_60">{f"{s_rsi_60:.2f}" if s_rsi_60 is not None else "—"}</td>
+            <td class="col-vol">{fmt_vol(s_vol)}</td>
+            <td class="col-avg_vol">{fmt_vol(s_avg_vol)}</td>
+            <td class="col-ratio" style="{vol_ratio_style}">{vol_ratio_str}</td>
+            <td class="col-pcr" style="{pcr_style}">{pcr_str}</td>
+            <td class="col-fut_oi">{fut_oi_str}</td>
+            <td class="col-oi_chg" style="{oi_chg_style}">{oi_chg_str}</td>
+            <td class="col-macd_day" style="font-weight: bold; color: {'#10b981' if s_macd_day is not None and s_macd_day > 0 else '#ef4444' if s_macd_day is not None else '#cbd5e1'};">{f"{s_macd_day:.3f}" if s_macd_day is not None else "—"}</td>
+            <td class="col-signal_day">{f"{s_macd_sig_day:.3f}" if s_macd_sig_day is not None else "—"}</td>
+            <td class="col-hist_day" style="font-weight: bold; color: {'#10b981' if s_macd_hist_day is not None and s_macd_hist_day > 0 else '#ef4444' if s_macd_hist_day is not None else '#cbd5e1'};">{f"{s_macd_hist_day:.3f}" if s_macd_hist_day is not None else "—"}</td>
+            <td class="col-rsi_day">{f"{s_rsi_day:.2f}" if s_rsi_day is not None else "—"}</td>
+            <td class="col-interp" style="{interp_style}">{interp}</td>
         </tr>
         """
         
@@ -798,20 +822,26 @@ def generate_dashboard(symbols):
         most_compressed_str = f"{best[0]} ({best[11]:.1f}%)"
         
         for item in dryup_list:
-            sym, price, macd_val, sig_val, hist_val, tr_str, tr_style, r_str, r_style, vol_val, avg_vol_val, ratio_val, ratio_style, interp_val, interp_style = item
+            sym, price, macd_val, sig_val, hist_val, tr_str, tr_style, r_str, r_style, vol_val, avg_vol_val, ratio_val, ratio_style, interp_val, interp_style, r_30, r_60, m_day, m_sig_day, m_hist_day, r_day = item
             
             dryup_rows += f"""
             <tr>
-                <td style="font-weight: bold; color: #fff;">{sym}</td>
-                <td>₹{price:.2f}</td>
-                <td style="{ratio_style} font-weight: bold;">{ratio_val:.1f}%</td>
-                <td>{fmt_vol(vol_val)}</td>
-                <td>{fmt_vol(avg_vol_val)}</td>
-                <td style="color: #cbd5e1; font-weight: bold;">{macd_val:.3f}</td>
-                <td style="color: #cbd5e1; font-weight: bold;">{hist_val:.3f}</td>
-                <td style="{tr_style}">{tr_str}</td>
-                <td style="{r_style}">{r_str}</td>
-                <td style="{interp_style}">{interp_val}</td>
+                <td class="col-symbol" style="font-weight: bold; color: #fff;">{sym}</td>
+                <td class="col-price">₹{price:.2f}</td>
+                <td class="col-ratio" style="{ratio_style} font-weight: bold;">{ratio_val:.1f}%</td>
+                <td class="col-vol">{fmt_vol(vol_val)}</td>
+                <td class="col-avg_vol">{fmt_vol(avg_vol_val)}</td>
+                <td class="col-macd_15" style="color: #cbd5e1; font-weight: bold;">{macd_val:.3f}</td>
+                <td class="col-hist_15" style="color: #cbd5e1; font-weight: bold;">{hist_val:.3f}</td>
+                <td class="col-trend" style="{tr_style}">{tr_str}</td>
+                <td class="col-rsi_15" style="{r_style}">{r_str}</td>
+                <td class="col-rsi_30">{f"{r_30:.2f}" if r_30 is not None else "—"}</td>
+                <td class="col-rsi_60">{f"{r_60:.2f}" if r_60 is not None else "—"}</td>
+                <td class="col-macd_day" style="font-weight: bold; color: {'#10b981' if m_day is not None and m_day > 0 else '#ef4444' if m_day is not None else '#cbd5e1'};">{f"{m_day:.3f}" if m_day is not None else "—"}</td>
+                <td class="col-signal_day">{f"{m_sig_day:.3f}" if m_sig_day is not None else "—"}</td>
+                <td class="col-hist_day" style="font-weight: bold; color: {'#10b981' if m_hist_day is not None and m_hist_day > 0 else '#ef4444' if m_hist_day is not None else '#cbd5e1'};">{f"{m_hist_day:.3f}" if m_hist_day is not None else "—"}</td>
+                <td class="col-rsi_day">{f"{r_day:.2f}" if r_day is not None else "—"}</td>
+                <td class="col-interp" style="{interp_style}">{interp_val}</td>
             </tr>
             """
             
@@ -948,6 +978,31 @@ def generate_dashboard(symbols):
             font-size: 11px; color: #3b82f6; background: rgba(59, 130, 246, 0.1);
             padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.3);
             display: inline-block; margin-top: 4px; font-weight: 600;
+        }}
+        .checkbox-group {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+            padding: 16px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }}
+        .checkbox-group label {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-main);
+            cursor: pointer;
+            user-select: none;
+        }}
+        .checkbox-group input[type="checkbox"] {{
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary);
+            cursor: pointer;
         }}
         
         .form-group {{
@@ -1109,42 +1164,54 @@ def generate_dashboard(symbols):
                     <table id="snapshot-table">
                         <thead>
                             <tr>
-                                <th>Symbol</th>
-                                <th>Price</th>
-                                <th>Day Chg %</th>
-                                <th>MACD (15m)</th>
-                                <th>Signal</th>
-                                <th>Hist</th>
-                                <th>MACD Trend</th>
-                                <th>RSI (15m)</th>
-                                <th>Today's Vol</th>
-                                <th>Avg Vol (10d)</th>
-                                <th>Vol Ratio</th>
-                                <th>Option PCR</th>
-                                <th>Futures OI</th>
-                                <th>OI Chg %</th>
-                                <th>Interpretation</th>
+                                <th class="col-symbol">Symbol</th>
+                                <th class="col-price">Price</th>
+                                <th class="col-day_change">Day Chg %</th>
+                                <th class="col-macd_15">MACD (15m)</th>
+                                <th class="col-signal_15">Signal</th>
+                                <th class="col-hist_15">Hist</th>
+                                <th class="col-trend">MACD Trend</th>
+                                <th class="col-rsi_15">RSI (15m)</th>
+                                <th class="col-rsi_30">RSI (30m)</th>
+                                <th class="col-rsi_60">RSI (60m)</th>
+                                <th class="col-vol">Today's Vol</th>
+                                <th class="col-avg_vol">Avg Vol (10d)</th>
+                                <th class="col-ratio">Vol Ratio</th>
+                                <th class="col-pcr">Option PCR</th>
+                                <th class="col-fut_oi">Futures OI</th>
+                                <th class="col-oi_chg">OI Chg %</th>
+                                <th class="col-macd_day">MACD (Day)</th>
+                                <th class="col-signal_day">Signal (Day)</th>
+                                <th class="col-hist_day">Hist (Day)</th>
+                                <th class="col-rsi_day">RSI (Day)</th>
+                                <th class="col-interp">Interpretation</th>
                             </tr>
                             <tr class="filter-row">
-                                <td><input type="text" id="flt-symbol" oninput="applyAllFilters()" placeholder="Filter symbol..."></td>
-                                <td><input type="text" id="flt-price" oninput="applyAllFilters()" placeholder="e.g. >1000"></td>
-                                <td><input type="text" id="flt-day-change" oninput="applyAllFilters()" placeholder="e.g. >1"></td>
-                                <td><input type="text" id="flt-macd" oninput="applyAllFilters()" placeholder="e.g. >5"></td>
-                                <td><input type="text" id="flt-signal" oninput="applyAllFilters()" placeholder="e.g. >5"></td>
-                                <td><input type="text" id="flt-hist" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
-                                <td><input type="text" id="flt-trend" oninput="applyAllFilters()" placeholder="e.g. >0.1"></td>
-                                <td><input type="text" id="flt-rsi" oninput="applyAllFilters()" placeholder="e.g. >70"></td>
-                                <td><input type="text" id="flt-vol" oninput="applyAllFilters()" placeholder="e.g. >1M"></td>
-                                <td><input type="text" id="flt-avg-vol" oninput="applyAllFilters()" placeholder="e.g. >1M"></td>
-                                <td><input type="text" id="flt-ratio" oninput="applyAllFilters()" placeholder="e.g. <50"></td>
-                                <td><input type="text" id="flt-pcr" oninput="applyAllFilters()" placeholder="e.g. >0.9"></td>
-                                <td><input type="text" id="flt-fut-oi" oninput="applyAllFilters()" placeholder="e.g. >10M"></td>
-                                <td><input type="text" id="flt-oi-chg" oninput="applyAllFilters()" placeholder="e.g. >2%"></td>
-                                <td><input type="text" id="flt-interp" oninput="applyAllFilters()" placeholder="Filter signal..."></td>
+                                <td class="col-symbol"><input type="text" id="flt-symbol" oninput="applyAllFilters()" placeholder="Filter symbol..."></td>
+                                <td class="col-price"><input type="text" id="flt-price" oninput="applyAllFilters()" placeholder="e.g. >1000"></td>
+                                <td class="col-day_change"><input type="text" id="flt-day-change" oninput="applyAllFilters()" placeholder="e.g. >1"></td>
+                                <td class="col-macd_15"><input type="text" id="flt-macd" oninput="applyAllFilters()" placeholder="e.g. >5"></td>
+                                <td class="col-signal_15"><input type="text" id="flt-signal" oninput="applyAllFilters()" placeholder="e.g. >5"></td>
+                                <td class="col-hist_15"><input type="text" id="flt-hist" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-trend"><input type="text" id="flt-trend" oninput="applyAllFilters()" placeholder="e.g. >0.1"></td>
+                                <td class="col-rsi_15"><input type="text" id="flt-rsi" oninput="applyAllFilters()" placeholder="e.g. >70"></td>
+                                <td class="col-rsi_30"><input type="text" id="flt-rsi-30" oninput="applyAllFilters()" placeholder="e.g. >50"></td>
+                                <td class="col-rsi_60"><input type="text" id="flt-rsi-60" oninput="applyAllFilters()" placeholder="e.g. >50"></td>
+                                <td class="col-vol"><input type="text" id="flt-vol" oninput="applyAllFilters()" placeholder="e.g. >1M"></td>
+                                <td class="col-avg_vol"><input type="text" id="flt-avg-vol" oninput="applyAllFilters()" placeholder="e.g. >1M"></td>
+                                <td class="col-ratio"><input type="text" id="flt-ratio" oninput="applyAllFilters()" placeholder="e.g. <50"></td>
+                                <td class="col-pcr"><input type="text" id="flt-pcr" oninput="applyAllFilters()" placeholder="e.g. >0.9"></td>
+                                <td class="col-fut_oi"><input type="text" id="flt-fut-oi" oninput="applyAllFilters()" placeholder="e.g. >10M"></td>
+                                <td class="col-oi_chg"><input type="text" id="flt-oi-chg" oninput="applyAllFilters()" placeholder="e.g. >2%"></td>
+                                <td class="col-macd_day"><input type="text" id="flt-macd-day" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-signal_day"><input type="text" id="flt-signal-day" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-hist_day"><input type="text" id="flt-hist-day" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-rsi_day"><input type="text" id="flt-rsi-day" oninput="applyAllFilters()" placeholder="e.g. >50"></td>
+                                <td class="col-interp"><input type="text" id="flt-interp" oninput="applyAllFilters()" placeholder="Filter signal..."></td>
                             </tr>
                         </thead>
                         <tbody id="snapshot-table-body">
-                            {snapshot_rows or '<tr><td colspan="15" style="text-align:center; padding: 30px; color: var(--text-muted);">No snapshot data in database.</td></tr>'}
+                            {snapshot_rows or '<tr><td colspan="21" style="text-align:center; padding: 30px; color: var(--text-muted);">No snapshot data in database.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1191,32 +1258,44 @@ def generate_dashboard(symbols):
                     <table id="dryup-table">
                         <thead>
                             <tr>
-                                <th>Symbol</th>
-                                <th>Price</th>
-                                <th>Vol Ratio</th>
-                                <th>Today's Vol</th>
-                                <th>Avg Vol (10d)</th>
-                                <th>MACD (15m)</th>
-                                <th>Hist</th>
-                                <th>MACD Trend</th>
-                                <th>RSI (15m)</th>
-                                <th>Interpretation</th>
+                                <th class="col-symbol">Symbol</th>
+                                <th class="col-price">Price</th>
+                                <th class="col-ratio">Vol Ratio</th>
+                                <th class="col-vol">Today's Vol</th>
+                                <th class="col-avg_vol">Avg Vol (10d)</th>
+                                <th class="col-macd_15">MACD (15m)</th>
+                                <th class="col-hist_15">Hist</th>
+                                <th class="col-trend">MACD Trend</th>
+                                <th class="col-rsi_15">RSI (15m)</th>
+                                <th class="col-rsi_30">RSI (30m)</th>
+                                <th class="col-rsi_60">RSI (60m)</th>
+                                <th class="col-macd_day">MACD (Day)</th>
+                                <th class="col-signal_day">Signal (Day)</th>
+                                <th class="col-hist_day">Hist (Day)</th>
+                                <th class="col-rsi_day">RSI (Day)</th>
+                                <th class="col-interp">Interpretation</th>
                             </tr>
                             <tr class="filter-row">
-                                <td><input type="text" id="flt-dry-symbol" oninput="applyAllDryupFilters()" placeholder="Filter symbol..."></td>
-                                <td><input type="text" id="flt-dry-price" oninput="applyAllDryupFilters()" placeholder="e.g. >1000"></td>
-                                <td><input type="text" id="flt-dry-ratio" oninput="applyAllDryupFilters()" placeholder="e.g. <30"></td>
-                                <td><input type="text" id="flt-dry-vol" oninput="applyAllDryupFilters()" placeholder="e.g. >100K"></td>
-                                <td><input type="text" id="flt-dry-avg-vol" oninput="applyAllDryupFilters()" placeholder="e.g. >100K"></td>
-                                <td><input type="text" id="flt-dry-macd" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
-                                <td><input type="text" id="flt-dry-hist" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
-                                <td><input type="text" id="flt-dry-trend" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
-                                <td><input type="text" id="flt-dry-rsi" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
-                                <td><input type="text" id="flt-dry-interp" oninput="applyAllDryupFilters()" placeholder="Filter signal..."></td>
+                                <td class="col-symbol"><input type="text" id="flt-dry-symbol" oninput="applyAllDryupFilters()" placeholder="Filter symbol..."></td>
+                                <td class="col-price"><input type="text" id="flt-dry-price" oninput="applyAllDryupFilters()" placeholder="e.g. >1000"></td>
+                                <td class="col-ratio"><input type="text" id="flt-dry-ratio" oninput="applyAllDryupFilters()" placeholder="e.g. <30"></td>
+                                <td class="col-vol"><input type="text" id="flt-dry-vol" oninput="applyAllDryupFilters()" placeholder="e.g. >100K"></td>
+                                <td class="col-avg_vol"><input type="text" id="flt-dry-avg-vol" oninput="applyAllDryupFilters()" placeholder="e.g. >100K"></td>
+                                <td class="col-macd_15"><input type="text" id="flt-dry-macd" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-hist_15"><input type="text" id="flt-dry-hist" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-trend"><input type="text" id="flt-dry-trend" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-rsi_15"><input type="text" id="flt-dry-rsi" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
+                                <td class="col-rsi_30"><input type="text" id="flt-dry-rsi-30" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
+                                <td class="col-rsi_60"><input type="text" id="flt-dry-rsi-60" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
+                                <td class="col-macd_day"><input type="text" id="flt-dry-macd-day" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-signal_day"><input type="text" id="flt-dry-signal-day" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-hist_day"><input type="text" id="flt-dry-hist-day" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-rsi_day"><input type="text" id="flt-dry-rsi-day" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
+                                <td class="col-interp"><input type="text" id="flt-dry-interp" oninput="applyAllDryupFilters()" placeholder="Filter signal..."></td>
                             </tr>
                         </thead>
                         <tbody id="dryup-table-body">
-                            {dryup_rows or '<tr><td colspan="10" style="text-align:center; padding: 30px; color: var(--text-muted);">No active volume dry-ups detected.</td></tr>'}
+                            {dryup_rows or '<tr><td colspan="16" style="text-align:center; padding: 30px; color: var(--text-muted);">No active volume dry-ups detected.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1261,6 +1340,34 @@ def generate_dashboard(symbols):
             </div>
             
             <button class="btn-submit" onclick="saveConfig()">💾 Save Configuration</button>
+        </div>
+        
+        <div class="card" style="max-width: 800px; margin: 24px auto 0 auto;">
+            <h2>📋 Dashboard Column Visibility</h2>
+            <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
+                Toggle the columns you want to display on the live snapshot and volume dry-up dashboards.
+            </div>
+            <div class="checkbox-group">
+                <label><input type="checkbox" id="cfg-col-day_change" onchange="toggleColumn('day_change')"> Day Chg %</label>
+                <label><input type="checkbox" id="cfg-col-macd_15" onchange="toggleColumn('macd_15')"> MACD (15m)</label>
+                <label><input type="checkbox" id="cfg-col-signal_15" onchange="toggleColumn('signal_15')"> Signal (15m)</label>
+                <label><input type="checkbox" id="cfg-col-hist_15" onchange="toggleColumn('hist_15')"> Hist (15m)</label>
+                <label><input type="checkbox" id="cfg-col-trend" onchange="toggleColumn('trend')"> MACD Trend</label>
+                <label><input type="checkbox" id="cfg-col-rsi_15" onchange="toggleColumn('rsi_15')"> RSI (15m)</label>
+                <label><input type="checkbox" id="cfg-col-rsi_30" onchange="toggleColumn('rsi_30')"> RSI (30m)</label>
+                <label><input type="checkbox" id="cfg-col-rsi_60" onchange="toggleColumn('rsi_60')"> RSI (60m)</label>
+                <label><input type="checkbox" id="cfg-col-vol" onchange="toggleColumn('vol')"> Today's Vol</label>
+                <label><input type="checkbox" id="cfg-col-avg_vol" onchange="toggleColumn('avg_vol')"> Avg Vol (10d)</label>
+                <label><input type="checkbox" id="cfg-col-ratio" onchange="toggleColumn('ratio')"> Vol Ratio</label>
+                <label><input type="checkbox" id="cfg-col-pcr" onchange="toggleColumn('pcr')"> Option PCR</label>
+                <label><input type="checkbox" id="cfg-col-fut_oi" onchange="toggleColumn('fut_oi')"> Futures OI</label>
+                <label><input type="checkbox" id="cfg-col-oi_chg" onchange="toggleColumn('oi_chg')"> OI Chg %</label>
+                <label><input type="checkbox" id="cfg-col-macd_day" onchange="toggleColumn('macd_day')"> MACD (Day)</label>
+                <label><input type="checkbox" id="cfg-col-signal_day" onchange="toggleColumn('signal_day')"> Signal (Day)</label>
+                <label><input type="checkbox" id="cfg-col-hist_day" onchange="toggleColumn('hist_day')"> Hist (Day)</label>
+                <label><input type="checkbox" id="cfg-col-rsi_day" onchange="toggleColumn('rsi_day')"> RSI (Day)</label>
+                <label><input type="checkbox" id="cfg-col-interp" onchange="toggleColumn('interp')"> Interpretation</label>
+            </div>
         </div>
     </div>
     
@@ -1396,12 +1503,18 @@ def generate_dashboard(symbols):
                 hist: document.getElementById('flt-hist').value,
                 trend: document.getElementById('flt-trend').value,
                 rsi: document.getElementById('flt-rsi').value,
+                rsi_30: document.getElementById('flt-rsi-30').value,
+                rsi_60: document.getElementById('flt-rsi-60').value,
                 vol: document.getElementById('flt-vol').value,
                 avg_vol: document.getElementById('flt-avg-vol').value,
                 ratio: document.getElementById('flt-ratio').value,
                 pcr: document.getElementById('flt-pcr').value,
                 fut_oi: document.getElementById('flt-fut-oi').value,
                 oi_chg: document.getElementById('flt-oi-chg').value,
+                macd_day: document.getElementById('flt-macd-day').value,
+                signal_day: document.getElementById('flt-signal-day').value,
+                hist_day: document.getElementById('flt-hist-day').value,
+                rsi_day: document.getElementById('flt-rsi-day').value,
                 interp: document.getElementById('flt-interp').value
             }};
             
@@ -1409,27 +1522,33 @@ def generate_dashboard(symbols):
             
             const rows = document.querySelectorAll('#snapshot-table-body tr');
             rows.forEach(row => {{
-                const cells = row.getElementsByTagName('td');
-                if (cells.length >= 15) {{
-                    const matchSymbol = cells[0].textContent.toLowerCase().includes(filters.symbol.toLowerCase().trim());
-                    const matchPrice = evaluateFilter(cells[1].textContent, filters.price);
-                    const matchDayChange = evaluateFilter(cells[2].textContent, filters.day_change);
-                    const matchMacd = evaluateFilter(cells[3].textContent, filters.macd);
-                    const matchSignal = evaluateFilter(cells[4].textContent, filters.signal);
-                    const matchHist = evaluateFilter(cells[5].textContent, filters.hist);
-                    const matchTrend = evaluateFilter(cells[6].textContent, filters.trend);
-                    const matchRsi = evaluateFilter(cells[7].textContent, filters.rsi);
-                    const matchVol = evaluateFilter(cells[8].textContent, filters.vol);
-                    const matchAvgVol = evaluateFilter(cells[9].textContent, filters.avg_vol);
-                    const matchRatio = evaluateFilter(cells[10].textContent, filters.ratio);
-                    const matchPcr = evaluateFilter(cells[11].textContent, filters.pcr);
-                    const matchFutOi = evaluateFilter(cells[12].textContent, filters.fut_oi);
-                    const matchOiChg = evaluateFilter(cells[13].textContent, filters.oi_chg);
-                    const matchInterp = cells[14].textContent.toLowerCase().includes(filters.interp.toLowerCase().trim());
+                if (row.querySelector('.col-symbol')) {{
+                    const matchSymbol = row.querySelector('.col-symbol').textContent.toLowerCase().includes(filters.symbol.toLowerCase().trim());
+                    const matchPrice = evaluateFilter(row.querySelector('.col-price').textContent, filters.price);
+                    const matchDayChange = evaluateFilter(row.querySelector('.col-day_change').textContent, filters.day_change);
+                    const matchMacd = evaluateFilter(row.querySelector('.col-macd_15').textContent, filters.macd);
+                    const matchSignal = evaluateFilter(row.querySelector('.col-signal_15').textContent, filters.signal);
+                    const matchHist = evaluateFilter(row.querySelector('.col-hist_15').textContent, filters.hist);
+                    const matchTrend = evaluateFilter(row.querySelector('.col-trend').textContent, filters.trend);
+                    const matchRsi = evaluateFilter(row.querySelector('.col-rsi_15').textContent, filters.rsi);
+                    const matchRsi30 = evaluateFilter(row.querySelector('.col-rsi_30').textContent, filters.rsi_30);
+                    const matchRsi60 = evaluateFilter(row.querySelector('.col-rsi_60').textContent, filters.rsi_60);
+                    const matchVol = evaluateFilter(row.querySelector('.col-vol').textContent, filters.vol);
+                    const matchAvgVol = evaluateFilter(row.querySelector('.col-avg_vol').textContent, filters.avg_vol);
+                    const matchRatio = evaluateFilter(row.querySelector('.col-ratio').textContent, filters.ratio);
+                    const matchPcr = evaluateFilter(row.querySelector('.col-pcr').textContent, filters.pcr);
+                    const matchFutOi = evaluateFilter(row.querySelector('.col-fut_oi').textContent, filters.fut_oi);
+                    const matchOiChg = evaluateFilter(row.querySelector('.col-oi_chg').textContent, filters.oi_chg);
+                    const matchMacdDay = evaluateFilter(row.querySelector('.col-macd_day').textContent, filters.macd_day);
+                    const matchSignalDay = evaluateFilter(row.querySelector('.col-signal_day').textContent, filters.signal_day);
+                    const matchHistDay = evaluateFilter(row.querySelector('.col-hist_day').textContent, filters.hist_day);
+                    const matchRsiDay = evaluateFilter(row.querySelector('.col-rsi_day').textContent, filters.rsi_day);
+                    const matchInterp = row.querySelector('.col-interp').textContent.toLowerCase().includes(filters.interp.toLowerCase().trim());
                     
                     const matchesAll = matchSymbol && matchPrice && matchDayChange && matchMacd && matchSignal && 
-                                       matchHist && matchTrend && matchRsi && matchVol && 
-                                       matchAvgVol && matchRatio && matchPcr && matchFutOi && matchOiChg && matchInterp;
+                                       matchHist && matchTrend && matchRsi && matchRsi30 && matchRsi60 && matchVol && 
+                                       matchAvgVol && matchRatio && matchPcr && matchFutOi && matchOiChg && 
+                                       matchMacdDay && matchSignalDay && matchHistDay && matchRsiDay && matchInterp;
                     row.style.display = matchesAll ? '' : 'none';
                 }}
             }});
@@ -1446,6 +1565,12 @@ def generate_dashboard(symbols):
                 hist: document.getElementById('flt-dry-hist').value,
                 trend: document.getElementById('flt-dry-trend').value,
                 rsi: document.getElementById('flt-dry-rsi').value,
+                rsi_30: document.getElementById('flt-dry-rsi-30').value,
+                rsi_60: document.getElementById('flt-dry-rsi-60').value,
+                macd_day: document.getElementById('flt-dry-macd-day').value,
+                signal_day: document.getElementById('flt-dry-signal-day').value,
+                hist_day: document.getElementById('flt-dry-hist-day').value,
+                rsi_day: document.getElementById('flt-dry-rsi-day').value,
                 interp: document.getElementById('flt-dry-interp').value
             }};
             
@@ -1453,22 +1578,28 @@ def generate_dashboard(symbols):
             
             const rows = document.querySelectorAll('#dryup-table-body tr');
             rows.forEach(row => {{
-                const cells = row.getElementsByTagName('td');
-                if (cells.length >= 10) {{
-                    const matchSymbol = cells[0].textContent.toLowerCase().includes(filters.symbol.toLowerCase().trim());
-                    const matchPrice = evaluateFilter(cells[1].textContent, filters.price);
-                    const matchRatio = evaluateFilter(cells[2].textContent, filters.ratio);
-                    const matchVol = evaluateFilter(cells[3].textContent, filters.vol);
-                    const matchAvgVol = evaluateFilter(cells[4].textContent, filters.avg_vol);
-                    const matchMacd = evaluateFilter(cells[5].textContent, filters.macd);
-                    const matchHist = evaluateFilter(cells[6].textContent, filters.hist);
-                    const matchTrend = evaluateFilter(cells[7].textContent, filters.trend);
-                    const matchRsi = evaluateFilter(cells[8].textContent, filters.rsi);
-                    const matchInterp = cells[9].textContent.toLowerCase().includes(filters.interp.toLowerCase().trim());
+                if (row.querySelector('.col-symbol')) {{
+                    const matchSymbol = row.querySelector('.col-symbol').textContent.toLowerCase().includes(filters.symbol.toLowerCase().trim());
+                    const matchPrice = evaluateFilter(row.querySelector('.col-price').textContent, filters.price);
+                    const matchRatio = evaluateFilter(row.querySelector('.col-ratio').textContent, filters.ratio);
+                    const matchVol = evaluateFilter(row.querySelector('.col-vol').textContent, filters.vol);
+                    const matchAvgVol = evaluateFilter(row.querySelector('.col-avg_vol').textContent, filters.avg_vol);
+                    const matchMacd = evaluateFilter(row.querySelector('.col-macd_15').textContent, filters.macd);
+                    const matchHist = evaluateFilter(row.querySelector('.col-hist_15').textContent, filters.hist);
+                    const matchTrend = evaluateFilter(row.querySelector('.col-trend').textContent, filters.trend);
+                    const matchRsi = evaluateFilter(row.querySelector('.col-rsi_15').textContent, filters.rsi);
+                    const matchRsi30 = evaluateFilter(row.querySelector('.col-rsi_30').textContent, filters.rsi_30);
+                    const matchRsi60 = evaluateFilter(row.querySelector('.col-rsi_60').textContent, filters.rsi_60);
+                    const matchMacdDay = evaluateFilter(row.querySelector('.col-macd_day').textContent, filters.macd_day);
+                    const matchSignalDay = evaluateFilter(row.querySelector('.col-signal_day').textContent, filters.signal_day);
+                    const matchHistDay = evaluateFilter(row.querySelector('.col-hist_day').textContent, filters.hist_day);
+                    const matchRsiDay = evaluateFilter(row.querySelector('.col-rsi_day').textContent, filters.rsi_day);
+                    const matchInterp = row.querySelector('.col-interp').textContent.toLowerCase().includes(filters.interp.toLowerCase().trim());
                     
                     const matchesAll = matchSymbol && matchPrice && matchRatio && matchVol && 
                                        matchAvgVol && matchMacd && matchHist && matchTrend && 
-                                       matchRsi && matchInterp;
+                                       matchRsi && matchRsi30 && matchRsi60 && matchMacdDay && 
+                                       matchSignalDay && matchHistDay && matchRsiDay && matchInterp;
                     row.style.display = matchesAll ? '' : 'none';
                 }}
             }});
@@ -1497,12 +1628,18 @@ def generate_dashboard(symbols):
                     document.getElementById('flt-hist').value = filters.hist || '';
                     document.getElementById('flt-trend').value = filters.trend || '';
                     document.getElementById('flt-rsi').value = filters.rsi || '';
+                    if(document.getElementById('flt-rsi-30')) document.getElementById('flt-rsi-30').value = filters.rsi_30 || '';
+                    if(document.getElementById('flt-rsi-60')) document.getElementById('flt-rsi-60').value = filters.rsi_60 || '';
                     document.getElementById('flt-vol').value = filters.vol || '';
                     document.getElementById('flt-avg-vol').value = filters.avg_vol || '';
                     document.getElementById('flt-ratio').value = filters.ratio || '';
                     document.getElementById('flt-pcr').value = filters.pcr || '';
                     document.getElementById('flt-fut-oi').value = filters.fut_oi || '';
                     document.getElementById('flt-oi-chg').value = filters.oi_chg || '';
+                    if(document.getElementById('flt-macd-day')) document.getElementById('flt-macd-day').value = filters.macd_day || '';
+                    if(document.getElementById('flt-signal-day')) document.getElementById('flt-signal-day').value = filters.signal_day || '';
+                    if(document.getElementById('flt-hist-day')) document.getElementById('flt-hist-day').value = filters.hist_day || '';
+                    if(document.getElementById('flt-rsi-day')) document.getElementById('flt-rsi-day').value = filters.rsi_day || '';
                     document.getElementById('flt-interp').value = filters.interp || '';
                     applyAllFilters();
                 }} catch(e) {{
@@ -1523,14 +1660,82 @@ def generate_dashboard(symbols):
                     document.getElementById('flt-dry-hist').value = filters.hist || '';
                     document.getElementById('flt-dry-trend').value = filters.trend || '';
                     document.getElementById('flt-dry-rsi').value = filters.rsi || '';
+                    if(document.getElementById('flt-dry-rsi-30')) document.getElementById('flt-dry-rsi-30').value = filters.rsi_30 || '';
+                    if(document.getElementById('flt-dry-rsi-60')) document.getElementById('flt-dry-rsi-60').value = filters.rsi_60 || '';
+                    if(document.getElementById('flt-dry-macd-day')) document.getElementById('flt-dry-macd-day').value = filters.macd_day || '';
+                    if(document.getElementById('flt-dry-signal-day')) document.getElementById('flt-dry-signal-day').value = filters.signal_day || '';
+                    if(document.getElementById('flt-dry-hist-day')) document.getElementById('flt-dry-hist-day').value = filters.hist_day || '';
+                    if(document.getElementById('flt-dry-rsi-day')) document.getElementById('flt-dry-rsi-day').value = filters.rsi_day || '';
                     document.getElementById('flt-dry-interp').value = filters.interp || '';
                     applyAllDryupFilters();
                 }} catch(e) {{
                     console.error("Error restoring dryup filters:", e);
                 }}
             }}
+            
+            // Reapply column visibility settings
+            applyColumnVisibility();
         }}
-        
+
+        const DEFAULT_COLUMNS = {{
+            day_change: true,
+            macd_15: true,
+            signal_15: true,
+            hist_15: true,
+            trend: true,
+            rsi_15: true,
+            rsi_30: true,
+            rsi_60: true,
+            vol: true,
+            avg_vol: true,
+            ratio: true,
+            pcr: true,
+            fut_oi: true,
+            oi_chg: true,
+            macd_day: true,
+            signal_day: true,
+            hist_day: true,
+            rsi_day: true,
+            interp: true
+        }};
+
+        function getColumnPreferences() {{
+            const saved = localStorage.getItem('macd_col_visibility');
+            if (saved) {{
+                try {{
+                    return {{...DEFAULT_COLUMNS, ...JSON.parse(saved)}};
+                }} catch(e) {{}}
+            }}
+            return {{...DEFAULT_COLUMNS}};
+        }}
+
+        function saveColumnPreferences(prefs) {{
+            localStorage.setItem('macd_col_visibility', JSON.stringify(prefs));
+        }}
+
+        function applyColumnVisibility() {{
+            const prefs = getColumnPreferences();
+            for (const [col, visible] of Object.entries(prefs)) {{
+                document.querySelectorAll('.col-' + col).forEach(el => {{
+                    el.style.display = visible ? '' : 'none';
+                }});
+                const checkbox = document.getElementById('cfg-col-' + col);
+                if (checkbox) {{
+                    checkbox.checked = visible;
+                }}
+            }}
+        }}
+
+        function toggleColumn(colName) {{
+            const prefs = getColumnPreferences();
+            const checkbox = document.getElementById('cfg-col-' + colName);
+            if (checkbox) {{
+                prefs[colName] = checkbox.checked;
+                saveColumnPreferences(prefs);
+                applyColumnVisibility();
+            }}
+        }}
+
         function getApiUrl(path) {{
             return window.location.protocol === 'file:' ? 'http://localhost:8080' + path : path;
         }}

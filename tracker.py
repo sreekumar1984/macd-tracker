@@ -185,7 +185,12 @@ def query_tradingview_batch(symbols):
             "MACD.signal|15",
             "RSI|15",
             "volume",
-            "average_volume"
+            "average_volume",
+            "RSI|30",
+            "RSI|60",
+            "MACD.macd",
+            "MACD.signal",
+            "RSI"
         ]
     }
     headers = {
@@ -254,7 +259,7 @@ def _poll_and_save_impl(watchlist, force=False):
     for item in all_data:
         symbol = item.get("s")
         d_vals = item.get("d", [])
-        if len(d_vals) >= 7:
+        if len(d_vals) >= 12:
             close_price = d_vals[0]
             day_change = d_vals[1]
             macd_line = d_vals[2]
@@ -262,10 +267,19 @@ def _poll_and_save_impl(watchlist, force=False):
             rsi = d_vals[4]
             volume = d_vals[5]
             average_volume = d_vals[6]
+            rsi_30 = d_vals[7]
+            rsi_60 = d_vals[8]
+            macd_day = d_vals[9]
+            macd_signal_day = d_vals[10]
+            rsi_day = d_vals[11]
             
             histogram = None
             if macd_line is not None and signal_line is not None:
                 histogram = macd_line - signal_line
+                
+            macd_hist_day = None
+            if macd_day is not None and macd_signal_day is not None:
+                macd_hist_day = macd_day - macd_signal_day
                 
             clean_symbol = symbol
             if clean_symbol.startswith("NSE:"):
@@ -293,7 +307,13 @@ def _poll_and_save_impl(watchlist, force=False):
                 total_pe_oi,
                 pcr,
                 futures_oi,
-                futures_oi_change_pct
+                futures_oi_change_pct,
+                rsi_30,
+                rsi_60,
+                macd_day,
+                macd_signal_day,
+                macd_hist_day,
+                rsi_day
             ))
             
     if records_to_insert:

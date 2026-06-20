@@ -107,6 +107,11 @@ def init_db():
         print("  🗄️ Database Migration: Adding 'day_change' column to 'macd_records'...")
         cursor.execute("ALTER TABLE macd_records ADD COLUMN day_change REAL")
         
+    for new_col in ['rsi_30', 'rsi_60', 'macd_day', 'macd_signal_day', 'macd_hist_day', 'rsi_day']:
+        if new_col not in columns:
+            print(f"  🗄️ Database Migration: Adding '{new_col}' column to 'macd_records'...")
+            cursor.execute(f"ALTER TABLE macd_records ADD COLUMN {new_col} REAL")
+        
     # Also migrate alerts_triggered
     cursor.execute("PRAGMA table_info(alerts_triggered)")
     alert_columns = [col[1] for col in cursor.fetchall()]
@@ -128,6 +133,11 @@ def init_db():
     if 'day_change' not in alert_columns:
         print("  🗄️ Database Migration: Adding 'day_change' column to 'alerts_triggered'...")
         cursor.execute("ALTER TABLE alerts_triggered ADD COLUMN day_change REAL")
+        
+    for new_col in ['rsi_30', 'rsi_60', 'macd_day', 'macd_signal_day', 'macd_hist_day', 'rsi_day']:
+        if new_col not in alert_columns:
+            print(f"  🗄️ Database Migration: Adding '{new_col}' column to 'alerts_triggered'...")
+            cursor.execute(f"ALTER TABLE alerts_triggered ADD COLUMN {new_col} REAL")
     
     # Create indexes for fast querying
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_records_symbol_time ON macd_records (symbol, timestamp)")
@@ -138,22 +148,22 @@ def init_db():
     conn.commit()
     conn.close()
     print(f"Database initialized at {DB_PATH}")
-
+ 
 def insert_records(records):
     """
-    records is a list of tuples: (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct)
+    records is a list of tuples: (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     cursor.executemany("""
-        INSERT INTO macd_records (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO macd_records (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, records)
     
     conn.commit()
     conn.close()
-
+ 
 def cleanup_old_records(days=30):
     threshold = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
     conn = sqlite3.connect(DB_PATH)
@@ -175,23 +185,23 @@ def cleanup_old_records(days=30):
     if total_deleted > 0:
         print(f"  🧹 Housekeeping: Cleaned up {deleted_macd} macd, {deleted_alerts} alerts, {deleted_retros} retros older than {days} days.")
     return total_deleted
-
+ 
 def get_db_size_mb():
     if os.path.exists(DB_PATH):
         bytes_size = os.path.getsize(DB_PATH)
         return bytes_size / (1024 * 1024)
     return 0.0
-
+ 
 def insert_alerts(alerts):
     """
     alerts is a list of tuples:
-    (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct)
+    (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.executemany("""
-        INSERT INTO alerts_triggered (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO alerts_triggered (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, alerts)
     conn.commit()
     conn.close()
