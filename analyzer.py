@@ -76,7 +76,7 @@ def analyze_all_symbols(symbols):
     for symbol in symbols:
         # Fetch the last 2 records
         cursor.execute("""
-            SELECT timestamp, price, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct
+            SELECT timestamp, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct
             FROM macd_records
             WHERE symbol = ?
             ORDER BY timestamp DESC
@@ -90,8 +90,8 @@ def analyze_all_symbols(symbols):
         latest = rows[0]
         previous = rows[1]
         
-        lat_time, lat_price, lat_macd, lat_signal, lat_hist, lat_rsi, lat_vol, lat_avg_vol, lat_ce_oi, lat_pe_oi, lat_pcr, lat_fut_oi, lat_fut_oi_chg = latest
-        prev_time, prev_price, prev_macd, prev_signal, prev_hist, prev_rsi, prev_vol, prev_avg_vol, prev_ce_oi, prev_pe_oi, prev_pcr, prev_fut_oi, prev_fut_oi_chg = previous
+        lat_time, lat_price, lat_day_change, lat_macd, lat_signal, lat_hist, lat_rsi, lat_vol, lat_avg_vol, lat_ce_oi, lat_pe_oi, lat_pcr, lat_fut_oi, lat_fut_oi_chg = latest
+        prev_time, prev_price, prev_day_change, prev_macd, prev_signal, prev_hist, prev_rsi, prev_vol, prev_avg_vol, prev_ce_oi, prev_pe_oi, prev_pcr, prev_fut_oi, prev_fut_oi_chg = previous
         
         if None in (lat_macd, lat_signal, lat_hist, prev_macd, prev_signal, prev_hist):
             continue
@@ -145,6 +145,7 @@ def analyze_all_symbols(symbols):
                 "timestamp": timestamp_str,
                 "symbol": symbol,
                 "price": lat_price,
+                "day_change": lat_day_change,
                 "alert_type": alert_type,
                 "message": message,
                 "severity": severity,
@@ -176,6 +177,7 @@ def analyze_all_symbols(symbols):
                     "timestamp": timestamp_str,
                     "symbol": symbol,
                     "price": lat_price,
+                    "day_change": lat_day_change,
                     "alert_type": "VOLUME_DRYUP",
                     "message": f"Volume Dry-up (Vol: {fmt_vol(lat_vol)} vs 10d Avg: {fmt_vol(lat_avg_vol)}, Ratio: {lat_vol/lat_avg_vol*100:.1f}%)",
                     "severity": "INFO",
@@ -208,6 +210,7 @@ def analyze_all_symbols(symbols):
                 a["timestamp"],
                 a["symbol"],
                 a["price"],
+                a.get("day_change"),
                 a["alert_type"],
                 a["message"],
                 a["severity"],
