@@ -1531,9 +1531,13 @@ def generate_dashboard(symbols):
             }}
         }}
         
+        function getApiUrl(path) {{
+            return window.location.protocol === 'file:' ? 'http://localhost:8080' + path : path;
+        }}
+
         async function loadConfig() {{
             try {{
-                const r = await fetch('/config');
+                const r = await fetch(getApiUrl('/config'));
                 if (r.ok) {{
                     const cfg = await r.json();
                     document.getElementById('inp-interval').value = cfg.poll_interval_minutes;
@@ -1553,7 +1557,7 @@ def generate_dashboard(symbols):
             }};
             
             try {{
-                const r = await fetch('/config', {{
+                const r = await fetch(getApiUrl('/config'), {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
                     body: JSON.stringify(payload)
@@ -1575,7 +1579,7 @@ def generate_dashboard(symbols):
             btn.innerHTML = '⏳ Fetching TV Data...';
             
             try {{
-                const r = await fetch('/force_fetch', {{
+                const r = await fetch(getApiUrl('/force_fetch'), {{
                     method: 'POST'
                 }});
                 
