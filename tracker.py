@@ -8,6 +8,8 @@ from datetime import datetime, time as datetime_time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 import requests
+import yfinance as yf
+import pandas as pd
 
 # Import local modules
 import db_manager
@@ -209,6 +211,73 @@ def query_tradingview_batch(symbols):
         print(f"  ⚠️ Exception querying TradingView batch: {e}")
         return []
 
+def tv_to_yf_symbol(symbol):
+    if symbol.startswith("NSE:"):
+        clean = symbol[4:]
+    else:
+        clean = symbol
+    if clean == "NIFTY":
+        return "^NSEI"
+    elif clean == "BANKNIFTY":
+        return "^NSEBANK"
+    elif clean == "FINNIFTY":
+        return "NIFTY-FIN-SERVICE.NS"
+    elif clean == "MIDCPNIFTY":
+        return "^NSEMDCP50"
+    
+    clean_yf = clean.replace("_", "-")
+    return f"{clean_yf}.NS"
+
+def calculate_45m_macd_batch(watchlist):
+    print("  📡 Fetching 45-minute MACD from yfinance...")
+    yf_symbols = [tv_to_yf_symbol(sym) for sym in watchlist]
+    yf_to_tv = {tv_to_yf_symbol(sym): sym for sym in watchlist}
+    
+    results = {}
+    try:
+        df = yf.download(yf_symbols, period="10d", interval="15m", group_by="ticker", threads=30, progress=False)
+        for yf_sym in yf_symbols:
+            try:
+                # Check if symbol has data in df
+                if isinstance(df.columns, pd.MultiIndex):
+                    if yf_sym not in df.columns.levels[0]:
+                        continue
+                    sym_df = df[yf_sym].dropna()
+                else:
+                    if yf_sym not in df.columns:
+                        continue
+                    sym_df = df[yf_sym].dropna()
+                    
+                if sym_df.empty:
+                    continue
+                    
+                # Resample to 45m
+                resampled = sym_df.resample('45min', origin='start_day').agg({
+                    'Open': 'first',
+                    'High': 'max',
+                    'Low': 'min',
+                    'Close': 'last',
+                    'Volume': 'sum'
+                }).dropna()
+                
+                if len(resampled) < 26:
+                    continue
+                    
+                close_prices = resampled['Close']
+                exp1 = close_prices.ewm(span=12, adjust=False).mean()
+                exp2 = close_prices.ewm(span=26, adjust=False).mean()
+                macd = exp1 - exp2
+                sig = macd.ewm(span=9, adjust=False).mean()
+                hist = macd - sig
+                
+                results[yf_to_tv[yf_sym]] = (float(macd.iloc[-1]), float(sig.iloc[-1]), float(hist.iloc[-1]))
+            except Exception as e:
+                # Ignore individual stock errors
+                pass
+    except Exception as e:
+        print(f"  ⚠️ Error downloading or calculating 45m MACD: {e}")
+    return results
+
 def poll_and_save(watchlist, force=False):
     with DB_WRITE_LOCK:
         return _poll_and_save_impl(watchlist, force)
@@ -255,6 +324,9 @@ def _poll_and_save_impl(watchlist, force=False):
         
     print(f"  ✅ Retrieved data for {len(all_data)} symbols.")
     
+    # Calculate 45m MACD values via yfinance
+    macd_45_data = calculate_45m_macd_batch(watchlist)
+    
     records_to_insert = []
     for item in all_data:
         symbol = item.get("s")
@@ -280,6 +352,9 @@ def _poll_and_save_impl(watchlist, force=False):
             macd_hist_day = None
             if macd_day is not None and macd_signal_day is not None:
                 macd_hist_day = macd_day - macd_signal_day
+                
+            # Get 45m MACD values
+            macd_45, signal_45, hist_45 = macd_45_data.get(symbol, (None, None, None))
                 
             clean_symbol = symbol
             if clean_symbol.startswith("NSE:"):
@@ -313,7 +388,10 @@ def _poll_and_save_impl(watchlist, force=False):
                 macd_day,
                 macd_signal_day,
                 macd_hist_day,
-                rsi_day
+                rsi_day,
+                macd_45,
+                signal_45,
+                hist_45
             ))
             
     if records_to_insert:

@@ -30,7 +30,16 @@ def init_db():
             total_pe_oi REAL,
             pcr REAL,
             futures_oi REAL,
-            futures_oi_change_pct REAL
+            futures_oi_change_pct REAL,
+            rsi_30 REAL,
+            rsi_60 REAL,
+            macd_day REAL,
+            macd_signal_day REAL,
+            macd_hist_day REAL,
+            rsi_day REAL,
+            macd_45 REAL,
+            macd_signal_45 REAL,
+            macd_hist_45 REAL
         )
     """)
     
@@ -56,7 +65,16 @@ def init_db():
             total_pe_oi REAL,
             pcr REAL,
             futures_oi REAL,
-            futures_oi_change_pct REAL
+            futures_oi_change_pct REAL,
+            rsi_30 REAL,
+            rsi_60 REAL,
+            macd_day REAL,
+            macd_signal_day REAL,
+            macd_hist_day REAL,
+            rsi_day REAL,
+            macd_45 REAL,
+            macd_signal_45 REAL,
+            macd_hist_45 REAL
         )
     """)
     
@@ -107,7 +125,7 @@ def init_db():
         print("  🗄️ Database Migration: Adding 'day_change' column to 'macd_records'...")
         cursor.execute("ALTER TABLE macd_records ADD COLUMN day_change REAL")
         
-    for new_col in ['rsi_30', 'rsi_60', 'macd_day', 'macd_signal_day', 'macd_hist_day', 'rsi_day']:
+    for new_col in ['rsi_30', 'rsi_60', 'macd_day', 'macd_signal_day', 'macd_hist_day', 'rsi_day', 'macd_45', 'macd_signal_45', 'macd_hist_45']:
         if new_col not in columns:
             print(f"  🗄️ Database Migration: Adding '{new_col}' column to 'macd_records'...")
             cursor.execute(f"ALTER TABLE macd_records ADD COLUMN {new_col} REAL")
@@ -134,7 +152,7 @@ def init_db():
         print("  🗄️ Database Migration: Adding 'day_change' column to 'alerts_triggered'...")
         cursor.execute("ALTER TABLE alerts_triggered ADD COLUMN day_change REAL")
         
-    for new_col in ['rsi_30', 'rsi_60', 'macd_day', 'macd_signal_day', 'macd_hist_day', 'rsi_day']:
+    for new_col in ['rsi_30', 'rsi_60', 'macd_day', 'macd_signal_day', 'macd_hist_day', 'rsi_day', 'macd_45', 'macd_signal_45', 'macd_hist_45']:
         if new_col not in alert_columns:
             print(f"  🗄️ Database Migration: Adding '{new_col}' column to 'alerts_triggered'...")
             cursor.execute(f"ALTER TABLE alerts_triggered ADD COLUMN {new_col} REAL")
@@ -151,14 +169,14 @@ def init_db():
  
 def insert_records(records):
     """
-    records is a list of tuples: (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
+    records is a list of tuples: (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day, macd_45, macd_signal_45, macd_hist_45)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     cursor.executemany("""
-        INSERT INTO macd_records (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO macd_records (timestamp, symbol, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day, macd_45, macd_signal_45, macd_hist_45)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, records)
     
     conn.commit()
@@ -195,13 +213,13 @@ def get_db_size_mb():
 def insert_alerts(alerts):
     """
     alerts is a list of tuples:
-    (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
+    (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day, macd_45, macd_signal_45, macd_hist_45)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.executemany("""
-        INSERT INTO alerts_triggered (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO alerts_triggered (timestamp, symbol, price, day_change, alert_type, message, severity, macd_line, signal_line, histogram, macd_change, histogram_change, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day, macd_45, macd_signal_45, macd_hist_45)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, alerts)
     conn.commit()
     conn.close()

@@ -433,7 +433,7 @@ def generate_dashboard(symbols):
     latest_snapshot = []
     for symbol in symbols:
         cursor.execute("""
-            SELECT timestamp, price, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, day_change, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day
+            SELECT timestamp, price, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, day_change, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day, macd_45, macd_signal_45, macd_hist_45
             FROM macd_records
             WHERE symbol = ?
             ORDER BY timestamp DESC
@@ -612,7 +612,7 @@ def generate_dashboard(symbols):
             continue
             
         latest = rows[0]
-        t_stamp, s_price, s_macd, s_sig, s_hist, s_rsi, s_vol, s_avg_vol, s_ce_oi, s_pe_oi, s_pcr, s_fut_oi, s_fut_oi_chg, s_day_chg, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day = latest
+        t_stamp, s_price, s_macd, s_sig, s_hist, s_rsi, s_vol, s_avg_vol, s_ce_oi, s_pe_oi, s_pcr, s_fut_oi, s_fut_oi_chg, s_day_chg, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day, s_macd_45, s_sig_45, s_hist_45 = latest
         
         # Format daily price change
         day_chg_str = "—"
@@ -754,11 +754,18 @@ def generate_dashboard(symbols):
         if is_dryup:
             # We store the required elements for the Dry-up Tab row
             dryup_list.append((
-                sym, s_price, s_macd, s_sig, s_hist, trend_str, trend_style, rsi_str, rsi_style, s_vol, s_avg_vol, (s_vol / s_avg_vol) * 100, vol_ratio_style, interp, interp_style, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day
+                sym, s_price, s_macd, s_sig, s_hist, trend_str, trend_style, rsi_str, rsi_style, s_vol, s_avg_vol, (s_vol / s_avg_vol) * 100, vol_ratio_style, interp, interp_style, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day, s_macd_45, s_sig_45, s_hist_45
             ))
             
-        macd_color = "#22c55e" if s_macd > config["momentum_threshold"] else "#cbd5e1"
-        hist_color = "#22c55e" if s_hist > 0 else "#ef4444"
+        # Format individual MACD columns
+        macd_color = "#22c55e" if s_macd is not None and s_macd > config.get("momentum_threshold", 5.0) else "#cbd5e1"
+        hist_color = "#22c55e" if s_hist is not None and s_hist > 0 else "#ef4444" if s_hist is not None else "#cbd5e1"
+        
+        macd_45_color = "#22c55e" if s_macd_45 is not None and s_macd_45 > config.get("momentum_threshold", 5.0) else "#cbd5e1"
+        hist_45_color = "#22c55e" if s_hist_45 is not None and s_hist_45 > 0 else "#ef4444" if s_hist_45 is not None else "#cbd5e1"
+        
+        macd_day_color = "#22c55e" if s_macd_day is not None and s_macd_day > config.get("momentum_threshold", 5.0) else "#cbd5e1"
+        hist_day_color = "#22c55e" if s_macd_hist_day is not None and s_macd_hist_day > 0 else "#ef4444" if s_macd_hist_day is not None else "#cbd5e1"
         
         pcr_str = f"{s_pcr:.2f}" if s_pcr is not None else "—"
         pcr_style = "color: #cbd5e1;"
@@ -784,9 +791,12 @@ def generate_dashboard(symbols):
             <td class="col-symbol" style="font-weight: bold; color: #fff;">{sym}</td>
             <td class="col-price">₹{s_price:.2f}</td>
             <td class="col-day_change" style="{day_chg_style}">{day_chg_str}</td>
-            <td class="col-macd_15" style="color: {macd_color}; font-weight: bold;">{s_macd:.3f}</td>
-            <td class="col-signal_15">{s_sig:.3f}</td>
-            <td class="col-hist_15" style="color: {hist_color}; font-weight: bold;">{s_hist:.3f}</td>
+            <td class="col-macd_15" style="color: {macd_color}; font-weight: bold;">{f"{s_macd:.3f}" if s_macd is not None else "—"}</td>
+            <td class="col-signal_15">{f"{s_sig:.3f}" if s_sig is not None else "—"}</td>
+            <td class="col-hist_15" style="color: {hist_color}; font-weight: bold;">{f"{s_hist:+.3f}" if s_hist is not None else "—"}</td>
+            <td class="col-macd_45" style="color: {macd_45_color}; font-weight: bold;">{f"{s_macd_45:.3f}" if s_macd_45 is not None else "—"}</td>
+            <td class="col-signal_45">{f"{s_sig_45:.3f}" if s_sig_45 is not None else "—"}</td>
+            <td class="col-hist_45" style="color: {hist_45_color}; font-weight: bold;">{f"{s_hist_45:+.3f}" if s_hist_45 is not None else "—"}</td>
             <td class="col-trend" style="{trend_style}">{trend_str}</td>
             <td class="col-rsi_15" style="{rsi_style}">{rsi_str}</td>
             <td class="col-rsi_30">{f"{s_rsi_30:.2f}" if s_rsi_30 is not None else "—"}</td>
@@ -797,9 +807,9 @@ def generate_dashboard(symbols):
             <td class="col-pcr" style="{pcr_style}">{pcr_str}</td>
             <td class="col-fut_oi">{fut_oi_str}</td>
             <td class="col-oi_chg" style="{oi_chg_style}">{oi_chg_str}</td>
-            <td class="col-macd_day" style="font-weight: bold; color: {'#10b981' if s_macd_day is not None and s_macd_day > 0 else '#ef4444' if s_macd_day is not None else '#cbd5e1'};">{f"{s_macd_day:.3f}" if s_macd_day is not None else "—"}</td>
+            <td class="col-macd_day" style="color: {macd_day_color}; font-weight: bold;">{f"{s_macd_day:.3f}" if s_macd_day is not None else "—"}</td>
             <td class="col-signal_day">{f"{s_macd_sig_day:.3f}" if s_macd_sig_day is not None else "—"}</td>
-            <td class="col-hist_day" style="font-weight: bold; color: {'#10b981' if s_macd_hist_day is not None and s_macd_hist_day > 0 else '#ef4444' if s_macd_hist_day is not None else '#cbd5e1'};">{f"{s_macd_hist_day:.3f}" if s_macd_hist_day is not None else "—"}</td>
+            <td class="col-hist_day" style="color: {hist_day_color}; font-weight: bold;">{f"{s_macd_hist_day:+.3f}" if s_macd_hist_day is not None else "—"}</td>
             <td class="col-rsi_day">{f"{s_rsi_day:.2f}" if s_rsi_day is not None else "—"}</td>
             <td class="col-interp" style="{interp_style}">{interp}</td>
         </tr>
@@ -822,8 +832,18 @@ def generate_dashboard(symbols):
         most_compressed_str = f"{best[0]} ({best[11]:.1f}%)"
         
         for item in dryup_list:
-            sym, price, macd_val, sig_val, hist_val, tr_str, tr_style, r_str, r_style, vol_val, avg_vol_val, ratio_val, ratio_style, interp_val, interp_style, r_30, r_60, m_day, m_sig_day, m_hist_day, r_day = item
+            sym, price, macd_val, sig_val, hist_val, tr_str, tr_style, r_str, r_style, vol_val, avg_vol_val, ratio_val, ratio_style, interp_val, interp_style, r_30, r_60, m_day, m_sig_day, m_hist_day, r_day, m_45, m_sig_45, m_hist_45 = item
             
+            # Format individual MACD columns
+            macd_color = "#22c55e" if macd_val is not None and macd_val > config.get("momentum_threshold", 5.0) else "#cbd5e1"
+            hist_color = "#22c55e" if hist_val is not None and hist_val > 0 else "#ef4444" if hist_val is not None else "#cbd5e1"
+            
+            macd_45_color = "#22c55e" if m_45 is not None and m_45 > config.get("momentum_threshold", 5.0) else "#cbd5e1"
+            hist_45_color = "#22c55e" if m_hist_45 is not None and m_hist_45 > 0 else "#ef4444" if m_hist_45 is not None else "#cbd5e1"
+            
+            macd_day_color = "#22c55e" if m_day is not None and m_day > config.get("momentum_threshold", 5.0) else "#cbd5e1"
+            hist_day_color = "#22c55e" if m_hist_day is not None and m_hist_day > 0 else "#ef4444" if m_hist_day is not None else "#cbd5e1"
+
             dryup_rows += f"""
             <tr>
                 <td class="col-symbol" style="font-weight: bold; color: #fff;">{sym}</td>
@@ -831,15 +851,19 @@ def generate_dashboard(symbols):
                 <td class="col-ratio" style="{ratio_style} font-weight: bold;">{ratio_val:.1f}%</td>
                 <td class="col-vol">{fmt_vol(vol_val)}</td>
                 <td class="col-avg_vol">{fmt_vol(avg_vol_val)}</td>
-                <td class="col-macd_15" style="color: #cbd5e1; font-weight: bold;">{macd_val:.3f}</td>
-                <td class="col-hist_15" style="color: #cbd5e1; font-weight: bold;">{hist_val:.3f}</td>
+                <td class="col-macd_15" style="color: {macd_color}; font-weight: bold;">{f"{macd_val:.3f}" if macd_val is not None else "—"}</td>
+                <td class="col-signal_15">{f"{sig_val:.3f}" if sig_val is not None else "—"}</td>
+                <td class="col-hist_15" style="color: {hist_color}; font-weight: bold;">{f"{hist_val:+.3f}" if hist_val is not None else "—"}</td>
+                <td class="col-macd_45" style="color: {macd_45_color}; font-weight: bold;">{f"{m_45:.3f}" if m_45 is not None else "—"}</td>
+                <td class="col-signal_45">{f"{m_sig_45:.3f}" if m_sig_45 is not None else "—"}</td>
+                <td class="col-hist_45" style="color: {hist_45_color}; font-weight: bold;">{f"{m_hist_45:+.3f}" if m_hist_45 is not None else "—"}</td>
                 <td class="col-trend" style="{tr_style}">{tr_str}</td>
                 <td class="col-rsi_15" style="{r_style}">{r_str}</td>
                 <td class="col-rsi_30">{f"{r_30:.2f}" if r_30 is not None else "—"}</td>
                 <td class="col-rsi_60">{f"{r_60:.2f}" if r_60 is not None else "—"}</td>
-                <td class="col-macd_day" style="font-weight: bold; color: {'#10b981' if m_day is not None and m_day > 0 else '#ef4444' if m_day is not None else '#cbd5e1'};">{f"{m_day:.3f}" if m_day is not None else "—"}</td>
+                <td class="col-macd_day" style="color: {macd_day_color}; font-weight: bold;">{f"{m_day:.3f}" if m_day is not None else "—"}</td>
                 <td class="col-signal_day">{f"{m_sig_day:.3f}" if m_sig_day is not None else "—"}</td>
-                <td class="col-hist_day" style="font-weight: bold; color: {'#10b981' if m_hist_day is not None and m_hist_day > 0 else '#ef4444' if m_hist_day is not None else '#cbd5e1'};">{f"{m_hist_day:.3f}" if m_hist_day is not None else "—"}</td>
+                <td class="col-hist_day" style="color: {hist_day_color}; font-weight: bold;">{f"{m_hist_day:+.3f}" if m_hist_day is not None else "—"}</td>
                 <td class="col-rsi_day">{f"{r_day:.2f}" if r_day is not None else "—"}</td>
                 <td class="col-interp" style="{interp_style}">{interp_val}</td>
             </tr>
@@ -1168,8 +1192,11 @@ def generate_dashboard(symbols):
                                 <th class="col-price">Price</th>
                                 <th class="col-day_change">Day Chg %</th>
                                 <th class="col-macd_15">MACD (15m)</th>
-                                <th class="col-signal_15">Signal</th>
-                                <th class="col-hist_15">Hist</th>
+                                <th class="col-signal_15">Signal (15m)</th>
+                                <th class="col-hist_15">Hist (15m)</th>
+                                <th class="col-macd_45">MACD (45m)</th>
+                                <th class="col-signal_45">Signal (45m)</th>
+                                <th class="col-hist_45">Hist (45m)</th>
                                 <th class="col-trend">MACD Trend</th>
                                 <th class="col-rsi_15">RSI (15m)</th>
                                 <th class="col-rsi_30">RSI (30m)</th>
@@ -1190,9 +1217,12 @@ def generate_dashboard(symbols):
                                 <td class="col-symbol"><input type="text" id="flt-symbol" oninput="applyAllFilters()" placeholder="Filter symbol..."></td>
                                 <td class="col-price"><input type="text" id="flt-price" oninput="applyAllFilters()" placeholder="e.g. >1000"></td>
                                 <td class="col-day_change"><input type="text" id="flt-day-change" oninput="applyAllFilters()" placeholder="e.g. >1"></td>
-                                <td class="col-macd_15"><input type="text" id="flt-macd" oninput="applyAllFilters()" placeholder="e.g. >5"></td>
-                                <td class="col-signal_15"><input type="text" id="flt-signal" oninput="applyAllFilters()" placeholder="e.g. >5"></td>
-                                <td class="col-hist_15"><input type="text" id="flt-hist" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-macd_15"><input type="text" id="flt-macd-15" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-signal_15"><input type="text" id="flt-signal-15" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-hist_15"><input type="text" id="flt-hist-15" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-macd_45"><input type="text" id="flt-macd-45" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-signal_45"><input type="text" id="flt-signal-45" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-hist_45"><input type="text" id="flt-hist-45" oninput="applyAllFilters()" placeholder="e.g. >0"></td>
                                 <td class="col-trend"><input type="text" id="flt-trend" oninput="applyAllFilters()" placeholder="e.g. >0.1"></td>
                                 <td class="col-rsi_15"><input type="text" id="flt-rsi" oninput="applyAllFilters()" placeholder="e.g. >70"></td>
                                 <td class="col-rsi_30"><input type="text" id="flt-rsi-30" oninput="applyAllFilters()" placeholder="e.g. >50"></td>
@@ -1211,7 +1241,7 @@ def generate_dashboard(symbols):
                             </tr>
                         </thead>
                         <tbody id="snapshot-table-body">
-                            {snapshot_rows or '<tr><td colspan="21" style="text-align:center; padding: 30px; color: var(--text-muted);">No snapshot data in database.</td></tr>'}
+                            {snapshot_rows or '<tr><td colspan="24" style="text-align:center; padding: 30px; color: var(--text-muted);">No snapshot data in database.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1264,7 +1294,11 @@ def generate_dashboard(symbols):
                                 <th class="col-vol">Today's Vol</th>
                                 <th class="col-avg_vol">Avg Vol (10d)</th>
                                 <th class="col-macd_15">MACD (15m)</th>
-                                <th class="col-hist_15">Hist</th>
+                                <th class="col-signal_15">Signal (15m)</th>
+                                <th class="col-hist_15">Hist (15m)</th>
+                                <th class="col-macd_45">MACD (45m)</th>
+                                <th class="col-signal_45">Signal (45m)</th>
+                                <th class="col-hist_45">Hist (45m)</th>
                                 <th class="col-trend">MACD Trend</th>
                                 <th class="col-rsi_15">RSI (15m)</th>
                                 <th class="col-rsi_30">RSI (30m)</th>
@@ -1281,8 +1315,12 @@ def generate_dashboard(symbols):
                                 <td class="col-ratio"><input type="text" id="flt-dry-ratio" oninput="applyAllDryupFilters()" placeholder="e.g. <30"></td>
                                 <td class="col-vol"><input type="text" id="flt-dry-vol" oninput="applyAllDryupFilters()" placeholder="e.g. >100K"></td>
                                 <td class="col-avg_vol"><input type="text" id="flt-dry-avg-vol" oninput="applyAllDryupFilters()" placeholder="e.g. >100K"></td>
-                                <td class="col-macd_15"><input type="text" id="flt-dry-macd" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
-                                <td class="col-hist_15"><input type="text" id="flt-dry-hist" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-macd_15"><input type="text" id="flt-dry-macd-15" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-signal_15"><input type="text" id="flt-dry-signal-15" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-hist_15"><input type="text" id="flt-dry-hist-15" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-macd_45"><input type="text" id="flt-dry-macd-45" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-signal_45"><input type="text" id="flt-dry-signal-45" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
+                                <td class="col-hist_45"><input type="text" id="flt-dry-hist-45" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
                                 <td class="col-trend"><input type="text" id="flt-dry-trend" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
                                 <td class="col-rsi_15"><input type="text" id="flt-dry-rsi" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
                                 <td class="col-rsi_30"><input type="text" id="flt-dry-rsi-30" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
@@ -1295,7 +1333,7 @@ def generate_dashboard(symbols):
                             </tr>
                         </thead>
                         <tbody id="dryup-table-body">
-                            {dryup_rows or '<tr><td colspan="16" style="text-align:center; padding: 30px; color: var(--text-muted);">No active volume dry-ups detected.</td></tr>'}
+                            {dryup_rows or '<tr><td colspan="20" style="text-align:center; padding: 30px; color: var(--text-muted);">No active volume dry-ups detected.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1352,6 +1390,9 @@ def generate_dashboard(symbols):
                 <label><input type="checkbox" id="cfg-col-macd_15" onchange="toggleColumn('macd_15')"> MACD (15m)</label>
                 <label><input type="checkbox" id="cfg-col-signal_15" onchange="toggleColumn('signal_15')"> Signal (15m)</label>
                 <label><input type="checkbox" id="cfg-col-hist_15" onchange="toggleColumn('hist_15')"> Hist (15m)</label>
+                <label><input type="checkbox" id="cfg-col-macd_45" onchange="toggleColumn('macd_45')"> MACD (45m)</label>
+                <label><input type="checkbox" id="cfg-col-signal_45" onchange="toggleColumn('signal_45')"> Signal (45m)</label>
+                <label><input type="checkbox" id="cfg-col-hist_45" onchange="toggleColumn('hist_45')"> Hist (45m)</label>
                 <label><input type="checkbox" id="cfg-col-trend" onchange="toggleColumn('trend')"> MACD Trend</label>
                 <label><input type="checkbox" id="cfg-col-rsi_15" onchange="toggleColumn('rsi_15')"> RSI (15m)</label>
                 <label><input type="checkbox" id="cfg-col-rsi_30" onchange="toggleColumn('rsi_30')"> RSI (30m)</label>
@@ -1498,9 +1539,12 @@ def generate_dashboard(symbols):
                 symbol: document.getElementById('flt-symbol').value,
                 price: document.getElementById('flt-price').value,
                 day_change: document.getElementById('flt-day-change').value,
-                macd: document.getElementById('flt-macd').value,
-                signal: document.getElementById('flt-signal').value,
-                hist: document.getElementById('flt-hist').value,
+                macd_15: document.getElementById('flt-macd-15').value,
+                signal_15: document.getElementById('flt-signal-15').value,
+                hist_15: document.getElementById('flt-hist-15').value,
+                macd_45: document.getElementById('flt-macd-45').value,
+                signal_45: document.getElementById('flt-signal-45').value,
+                hist_45: document.getElementById('flt-hist-45').value,
                 trend: document.getElementById('flt-trend').value,
                 rsi: document.getElementById('flt-rsi').value,
                 rsi_30: document.getElementById('flt-rsi-30').value,
@@ -1526,9 +1570,12 @@ def generate_dashboard(symbols):
                     const matchSymbol = row.querySelector('.col-symbol').textContent.toLowerCase().includes(filters.symbol.toLowerCase().trim());
                     const matchPrice = evaluateFilter(row.querySelector('.col-price').textContent, filters.price);
                     const matchDayChange = evaluateFilter(row.querySelector('.col-day_change').textContent, filters.day_change);
-                    const matchMacd = evaluateFilter(row.querySelector('.col-macd_15').textContent, filters.macd);
-                    const matchSignal = evaluateFilter(row.querySelector('.col-signal_15').textContent, filters.signal);
-                    const matchHist = evaluateFilter(row.querySelector('.col-hist_15').textContent, filters.hist);
+                    const matchMacd15 = evaluateFilter(row.querySelector('.col-macd_15').textContent, filters.macd_15);
+                    const matchSignal15 = evaluateFilter(row.querySelector('.col-signal_15').textContent, filters.signal_15);
+                    const matchHist15 = evaluateFilter(row.querySelector('.col-hist_15').textContent, filters.hist_15);
+                    const matchMacd45 = evaluateFilter(row.querySelector('.col-macd_45').textContent, filters.macd_45);
+                    const matchSignal45 = evaluateFilter(row.querySelector('.col-signal_45').textContent, filters.signal_45);
+                    const matchHist45 = evaluateFilter(row.querySelector('.col-hist_45').textContent, filters.hist_45);
                     const matchTrend = evaluateFilter(row.querySelector('.col-trend').textContent, filters.trend);
                     const matchRsi = evaluateFilter(row.querySelector('.col-rsi_15').textContent, filters.rsi);
                     const matchRsi30 = evaluateFilter(row.querySelector('.col-rsi_30').textContent, filters.rsi_30);
@@ -1545,10 +1592,13 @@ def generate_dashboard(symbols):
                     const matchRsiDay = evaluateFilter(row.querySelector('.col-rsi_day').textContent, filters.rsi_day);
                     const matchInterp = row.querySelector('.col-interp').textContent.toLowerCase().includes(filters.interp.toLowerCase().trim());
                     
-                    const matchesAll = matchSymbol && matchPrice && matchDayChange && matchMacd && matchSignal && 
-                                       matchHist && matchTrend && matchRsi && matchRsi30 && matchRsi60 && matchVol && 
+                    const matchesAll = matchSymbol && matchPrice && matchDayChange && 
+                                       matchMacd15 && matchSignal15 && matchHist15 &&
+                                       matchMacd45 && matchSignal45 && matchHist45 &&
+                                       matchTrend && matchRsi && matchRsi30 && matchRsi60 && matchVol && 
                                        matchAvgVol && matchRatio && matchPcr && matchFutOi && matchOiChg && 
-                                       matchMacdDay && matchSignalDay && matchHistDay && matchRsiDay && matchInterp;
+                                       matchMacdDay && matchSignalDay && matchHistDay &&
+                                       matchRsiDay && matchInterp;
                     row.style.display = matchesAll ? '' : 'none';
                 }}
             }});
@@ -1561,8 +1611,12 @@ def generate_dashboard(symbols):
                 ratio: document.getElementById('flt-dry-ratio').value,
                 vol: document.getElementById('flt-dry-vol').value,
                 avg_vol: document.getElementById('flt-dry-avg-vol').value,
-                macd: document.getElementById('flt-dry-macd').value,
-                hist: document.getElementById('flt-dry-hist').value,
+                macd_15: document.getElementById('flt-dry-macd-15').value,
+                signal_15: document.getElementById('flt-dry-signal-15').value,
+                hist_15: document.getElementById('flt-dry-hist-15').value,
+                macd_45: document.getElementById('flt-dry-macd-45').value,
+                signal_45: document.getElementById('flt-dry-signal-45').value,
+                hist_45: document.getElementById('flt-dry-hist-45').value,
                 trend: document.getElementById('flt-dry-trend').value,
                 rsi: document.getElementById('flt-dry-rsi').value,
                 rsi_30: document.getElementById('flt-dry-rsi-30').value,
@@ -1584,8 +1638,12 @@ def generate_dashboard(symbols):
                     const matchRatio = evaluateFilter(row.querySelector('.col-ratio').textContent, filters.ratio);
                     const matchVol = evaluateFilter(row.querySelector('.col-vol').textContent, filters.vol);
                     const matchAvgVol = evaluateFilter(row.querySelector('.col-avg_vol').textContent, filters.avg_vol);
-                    const matchMacd = evaluateFilter(row.querySelector('.col-macd_15').textContent, filters.macd);
-                    const matchHist = evaluateFilter(row.querySelector('.col-hist_15').textContent, filters.hist);
+                    const matchMacd15 = evaluateFilter(row.querySelector('.col-macd_15').textContent, filters.macd_15);
+                    const matchSignal15 = evaluateFilter(row.querySelector('.col-signal_15').textContent, filters.signal_15);
+                    const matchHist15 = evaluateFilter(row.querySelector('.col-hist_15').textContent, filters.hist_15);
+                    const matchMacd45 = evaluateFilter(row.querySelector('.col-macd_45').textContent, filters.macd_45);
+                    const matchSignal45 = evaluateFilter(row.querySelector('.col-signal_45').textContent, filters.signal_45);
+                    const matchHist45 = evaluateFilter(row.querySelector('.col-hist_45').textContent, filters.hist_45);
                     const matchTrend = evaluateFilter(row.querySelector('.col-trend').textContent, filters.trend);
                     const matchRsi = evaluateFilter(row.querySelector('.col-rsi_15').textContent, filters.rsi);
                     const matchRsi30 = evaluateFilter(row.querySelector('.col-rsi_30').textContent, filters.rsi_30);
@@ -1597,9 +1655,11 @@ def generate_dashboard(symbols):
                     const matchInterp = row.querySelector('.col-interp').textContent.toLowerCase().includes(filters.interp.toLowerCase().trim());
                     
                     const matchesAll = matchSymbol && matchPrice && matchRatio && matchVol && 
-                                       matchAvgVol && matchMacd && matchHist && matchTrend && 
-                                       matchRsi && matchRsi30 && matchRsi60 && matchMacdDay && 
-                                       matchSignalDay && matchHistDay && matchRsiDay && matchInterp;
+                                       matchAvgVol && matchMacd15 && matchSignal15 && matchHist15 &&
+                                       matchMacd45 && matchSignal45 && matchHist45 && matchTrend && 
+                                       matchRsi && matchRsi30 && matchRsi60 && 
+                                       matchMacdDay && matchSignalDay && matchHistDay &&
+                                       matchRsiDay && matchInterp;
                     row.style.display = matchesAll ? '' : 'none';
                 }}
             }});
@@ -1623,9 +1683,12 @@ def generate_dashboard(symbols):
                     document.getElementById('flt-symbol').value = filters.symbol || '';
                     document.getElementById('flt-price').value = filters.price || '';
                     document.getElementById('flt-day-change').value = filters.day_change || '';
-                    document.getElementById('flt-macd').value = filters.macd || '';
-                    document.getElementById('flt-signal').value = filters.signal || '';
-                    document.getElementById('flt-hist').value = filters.hist || '';
+                    if(document.getElementById('flt-macd-15')) document.getElementById('flt-macd-15').value = filters.macd_15 || '';
+                    if(document.getElementById('flt-signal-15')) document.getElementById('flt-signal-15').value = filters.signal_15 || '';
+                    if(document.getElementById('flt-hist-15')) document.getElementById('flt-hist-15').value = filters.hist_15 || '';
+                    if(document.getElementById('flt-macd-45')) document.getElementById('flt-macd-45').value = filters.macd_45 || '';
+                    if(document.getElementById('flt-signal-45')) document.getElementById('flt-signal-45').value = filters.signal_45 || '';
+                    if(document.getElementById('flt-hist-45')) document.getElementById('flt-hist-45').value = filters.hist_45 || '';
                     document.getElementById('flt-trend').value = filters.trend || '';
                     document.getElementById('flt-rsi').value = filters.rsi || '';
                     if(document.getElementById('flt-rsi-30')) document.getElementById('flt-rsi-30').value = filters.rsi_30 || '';
@@ -1656,8 +1719,12 @@ def generate_dashboard(symbols):
                     document.getElementById('flt-dry-ratio').value = filters.ratio || '';
                     document.getElementById('flt-dry-vol').value = filters.vol || '';
                     document.getElementById('flt-dry-avg-vol').value = filters.avg_vol || '';
-                    document.getElementById('flt-dry-macd').value = filters.macd || '';
-                    document.getElementById('flt-dry-hist').value = filters.hist || '';
+                    if(document.getElementById('flt-dry-macd-15')) document.getElementById('flt-dry-macd-15').value = filters.macd_15 || '';
+                    if(document.getElementById('flt-dry-signal-15')) document.getElementById('flt-dry-signal-15').value = filters.signal_15 || '';
+                    if(document.getElementById('flt-dry-hist-15')) document.getElementById('flt-dry-hist-15').value = filters.hist_15 || '';
+                    if(document.getElementById('flt-dry-macd-45')) document.getElementById('flt-dry-macd-45').value = filters.macd_45 || '';
+                    if(document.getElementById('flt-dry-signal-45')) document.getElementById('flt-dry-signal-45').value = filters.signal_45 || '';
+                    if(document.getElementById('flt-dry-hist-45')) document.getElementById('flt-dry-hist-45').value = filters.hist_45 || '';
                     document.getElementById('flt-dry-trend').value = filters.trend || '';
                     document.getElementById('flt-dry-rsi').value = filters.rsi || '';
                     if(document.getElementById('flt-dry-rsi-30')) document.getElementById('flt-dry-rsi-30').value = filters.rsi_30 || '';
@@ -1682,6 +1749,9 @@ def generate_dashboard(symbols):
             macd_15: true,
             signal_15: true,
             hist_15: true,
+            macd_45: true,
+            signal_45: true,
+            hist_45: true,
             trend: true,
             rsi_15: true,
             rsi_30: true,
