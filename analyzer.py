@@ -1627,15 +1627,23 @@ def generate_dashboard(symbols):
             <h1>📊 MACD Momentum & Crossover Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <span class="meta">Monitoring all F&O stocks every 2 minutes</span>
-                <span class="db-info">🗄️ Database Disk Size: {size_str} (Capped at 30 Days)</span>
+                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: {size_str} (Capped at 30 Days)</span>
             </div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
             <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
                 <span class="pulse"></span> LIVE MONITORING
             </div>
-            <div class="meta">Last Updated: <strong>{now_str}</strong></div>
-            <button id="btn-force-fetch" onclick="triggerForceFetch()" class="btn-fetch">⚡ Force Fetch TV Data</button>
+            <div class="meta" id="last-updated-meta">Last Updated: <strong>{now_str}</strong></div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div id="fetch-progress-container" style="display: none; font-size: 11px; text-align: right; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px; color: #60a5fa; min-width: 180px;">
+                    <div id="fetch-progress-text" style="font-weight: 600; margin-bottom: 2px;">Initializing...</div>
+                    <div style="width: 100%; height: 4px; background: #1e293b; border-radius: 2px; overflow: hidden; display: block;">
+                        <div id="fetch-progress-bar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.2s;"></div>
+                    </div>
+                </div>
+                <button id="btn-force-fetch" onclick="triggerForceFetch()" class="btn-fetch">⚡ Force Fetch TV Data</button>
+            </div>
         </div>
     </header>
     
@@ -1667,7 +1675,7 @@ def generate_dashboard(symbols):
                                 <th>RSI</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="alerts-log-table-body">
                             {alert_rows or '<tr><td colspan="8" style="text-align:center; padding: 30px; color: var(--text-muted);">No alerts logged yet. Awaiting next poll...</td></tr>'}
                         </tbody>
                     </table>
@@ -1966,10 +1974,77 @@ def generate_dashboard(symbols):
         const savedTab = localStorage.getItem('activeTab') || 'dashboard';
         switchTab(savedTab);
         
+        async function updateDashboardSeamlessly() {{
+            try {{
+                const response = await fetch(window.location.href);
+                if (!response.ok) return;
+                const htmlText = await response.text();
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlText, 'text/html');
+                
+                const activeEl = document.activeElement;
+                let activeId = null;
+                let selectionStart = 0;
+                let selectionEnd = 0;
+                if (activeEl && activeEl.tagName === 'INPUT') {{
+                    activeId = activeEl.id;
+                    selectionStart = activeEl.selectionStart;
+                    selectionEnd = activeEl.selectionEnd;
+                }}
+                
+                const tableWrappers = document.querySelectorAll('.table-wrap');
+                const scrollPositions = Array.from(tableWrappers).map(el => el.scrollTop);
+                
+                const selectors = [
+                    '#alerts-log-table-body',
+                    '#snapshot-table-body',
+                    '#dryup-table-body',
+                    '#tab-retro',
+                    '#tab-ai',
+                    '#db-size-info',
+                    '#last-updated-meta'
+                ];
+                
+                selectors.forEach(selector => {{
+                    const oldEl = document.querySelector(selector);
+                    const newEl = doc.querySelector(selector);
+                    if (oldEl && newEl) {{
+                        oldEl.innerHTML = newEl.innerHTML;
+                    }}
+                }});
+                
+                const newTableWrappers = document.querySelectorAll('.table-wrap');
+                newTableWrappers.forEach((el, idx) => {{
+                    if (scrollPositions[idx] !== undefined) {{
+                        el.scrollTop = scrollPositions[idx];
+                    }}
+                }});
+                
+                if (typeof restoreFilters === 'function') {{
+                    restoreFilters();
+                }}
+                
+                if (activeId) {{
+                    const newActiveEl = document.getElementById(activeId);
+                    if (newActiveEl) {{
+                        newActiveEl.focus();
+                        try {{
+                            newActiveEl.setSelectionRange(selectionStart, selectionEnd);
+                        }} catch (e) {{}}
+                    }}
+                }}
+                
+                console.log("⚡ Dashboard seamlessly updated!");
+            }} catch (err) {{
+                console.error("Error doing seamless update:", err);
+            }}
+        }}
+
         setInterval(() => {{
             const currentTab = localStorage.getItem('activeTab') || 'dashboard';
             if (currentTab === 'dashboard' || currentTab === 'dryup') {{
-                location.reload();
+                updateDashboardSeamlessly();
             }}
         }}, 30000);
         
@@ -2364,9 +2439,15 @@ def generate_dashboard(symbols):
         
         async function triggerForceFetch() {{
             const btn = document.getElementById('btn-force-fetch');
-            const originalText = btn.innerHTML;
+            const progressContainer = document.getElementById('fetch-progress-container');
+            const progressText = document.getElementById('fetch-progress-text');
+            const progressBar = document.getElementById('fetch-progress-bar');
+            
             btn.disabled = true;
-            btn.innerHTML = '⏳ Fetching TV Data...';
+            btn.innerHTML = '⏳ Initializing...';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressText.innerHTML = 'Starting background fetch...';
             
             try {{
                 const r = await fetch(getApiUrl('/force_fetch'), {{
@@ -2374,10 +2455,45 @@ def generate_dashboard(symbols):
                 }});
                 
                 if (r.ok) {{
-                    showToast("⚡ TradingView data force fetched successfully!", false);
-                    setTimeout(() => {{
-                        location.reload();
+                    showToast("⚡ Force fetch started in background", false);
+                    
+                    // Poll progress
+                    const pollInterval = setInterval(async () => {{
+                        try {{
+                            const res = await fetch(getApiUrl('/force_fetch_status'));
+                            if (res.ok) {{
+                                const status = await res.json();
+                                if (status.running) {{
+                                    btn.innerHTML = '⏳ Fetching...';
+                                    const pct = status.total > 0 ? Math.round((status.progress / status.total) * 100) : 0;
+                                    progressBar.style.width = pct + '%';
+                                    progressText.innerHTML = status.message + ' (' + pct + '%)';
+                                }} else {{
+                                    clearInterval(pollInterval);
+                                    progressBar.style.width = '100%';
+                                    
+                                    if (status.error) {{
+                                        progressText.innerHTML = 'Error: ' + status.error;
+                                        showToast("❌ Fetch failed: " + status.error, true);
+                                        btn.innerHTML = '⚡ Force Fetch TV Data';
+                                        btn.disabled = false;
+                                    }} else {{
+                                        progressText.innerHTML = 'Success!';
+                                        btn.innerHTML = '⚡ Force Fetch TV Data';
+                                        btn.disabled = false;
+                                        showToast("⚡ Data fetched successfully!", false);
+                                        updateDashboardSeamlessly();
+                                        setTimeout(() => {{
+                                            progressContainer.style.display = 'none';
+                                        }}, 3000);
+                                    }}
+                                }}
+                            }}
+                        }} catch (err) {{
+                            console.error(err);
+                        }}
                     }}, 1000);
+                    
                 }} else {{
                     let errMsg = "Error triggering force fetch.";
                     try {{
@@ -2386,12 +2502,14 @@ def generate_dashboard(symbols):
                     }} catch (e) {{}}
                     showToast(errMsg, true);
                     btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    btn.innerHTML = '⚡ Force Fetch TV Data';
+                    progressContainer.style.display = 'none';
                 }}
             }} catch (e) {{
                 showToast("Connection failed.", true);
                 btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.innerHTML = '⚡ Force Fetch TV Data';
+                progressContainer.style.display = 'none';
             }}
         }}
         

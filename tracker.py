@@ -23,6 +23,16 @@ LAST_EOD_RUN_DATE = None
 WATCHLIST = []
 DB_WRITE_LOCK = threading.Lock()
 
+# Global status for tracking force fetch progress
+FETCH_STATUS = {
+    "running": False,
+    "progress": 0,
+    "total": 0,
+    "current_symbol": "",
+    "message": "Idle",
+    "error": None
+}
+
 # Global cache for latest OI data
 LATEST_OI_CACHE = {}
 LAST_OI_FETCH_DATE = None
@@ -97,6 +107,12 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
             self.end_headers()
             with open(CONFIG_PATH, "rb") as f:
                 self.wfile.write(f.read())
+        elif parsed.path == '/force_fetch_status':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps(FETCH_STATUS).encode('utf-8'))
         else:
             self.send_response(404)
             self.send_cors_headers()
@@ -132,6 +148,14 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
         elif parsed.path == '/force_fetch':
+            if FETCH_STATUS["running"]:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Force fetch already in progress"}).encode('utf-8'))
+                return
+                
             try:
                 global WATCHLIST
                 if not WATCHLIST:
@@ -142,14 +166,25 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                     else:
                         WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
                 
-                print("⚡ [Web Request] Force fetch triggered via Web Dashboard.")
-                poll_and_save(WATCHLIST, force=True)
+                print("⚡ [Web Request] Force fetch triggered via Web Dashboard. Starting background thread...")
+                
+                def run_force_fetch_async():
+                    global FETCH_STATUS
+                    try:
+                        poll_and_save(WATCHLIST, force=True)
+                    except Exception as e:
+                        FETCH_STATUS["running"] = False
+                        FETCH_STATUS["error"] = str(e)
+                        FETCH_STATUS["message"] = f"Error during force fetch: {e}"
+                        print(f"❌ Error during force fetch background thread: {e}")
+                
+                threading.Thread(target=run_force_fetch_async, daemon=True).start()
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_cors_headers()
                 self.end_headers()
-                self.wfile.write(json.dumps({"status": "success", "message": "Force fetch completed successfully"}).encode('utf-8'))
+                self.wfile.write(json.dumps({"status": "started", "message": "Force fetch started in background"}).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
@@ -283,13 +318,24 @@ def poll_and_save(watchlist, force=False):
         return _poll_and_save_impl(watchlist, force)
 
 def _poll_and_save_impl(watchlist, force=False):
-    global LAST_EOD_RUN_DATE, LATEST_OI_CACHE, LAST_OI_FETCH_DATE
+    global LAST_EOD_RUN_DATE, LATEST_OI_CACHE, LAST_OI_FETCH_DATE, FETCH_STATUS
     timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Initialize status
+    FETCH_STATUS = {
+        "running": True,
+        "progress": 0,
+        "total": len(watchlist),
+        "current_symbol": "Initializing",
+        "message": "Starting fetch...",
+        "error": None
+    }
     
     # Check if EOD Bhavcopy is ready (usually uploaded by 6:00 PM IST)
     now = datetime.now()
     current_date_str = now.strftime("%Y-%m-%d")
     if now.hour >= 18 and now.weekday() < 5 and LAST_OI_FETCH_DATE != current_date_str:
+        FETCH_STATUS["message"] = "Refreshing EOD OI Cache from Bhavcopy..."
         refresh_oi_cache()
     
     # Check if inside market hours
@@ -302,10 +348,14 @@ def _poll_and_save_impl(watchlist, force=False):
         if now.hour > 15 or (now.hour == 15 and now.minute >= 30):
             if LAST_EOD_RUN_DATE != current_date_str:
                 print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
+                FETCH_STATUS["message"] = "Running EOD Retrospective..."
                 analyzer.run_eod_retrospective(current_date_str)
                 LAST_EOD_RUN_DATE = current_date_str
                 # Re-generate the dashboard so EOD stats show up
                 analyzer.generate_dashboard(watchlist)
+        
+        FETCH_STATUS["running"] = False
+        FETCH_STATUS["message"] = "Skipped (outside market hours)"
         return
         
     if force:
@@ -318,16 +368,24 @@ def _poll_and_save_impl(watchlist, force=False):
     
     for idx, batch in enumerate(batches):
         print(f"  📡 Querying batch {idx+1}/{len(batches)} ({len(batch)} symbols)...")
+        FETCH_STATUS["message"] = f"Querying TradingView data (Batch {idx+1}/{len(batches)})..."
+        FETCH_STATUS["current_symbol"] = batch[0] if batch else ""
+        
         batch_results = query_tradingview_batch(batch)
         all_data.extend(batch_results)
+        
+        FETCH_STATUS["progress"] = len(all_data)
         time.sleep(0.5)
         
     print(f"  ✅ Retrieved data for {len(all_data)} symbols.")
     
     # Calculate 45m MACD values via yfinance
+    FETCH_STATUS["message"] = "Calculating 45-minute MACD from yfinance (takes a moment)..."
+    FETCH_STATUS["current_symbol"] = "yfinance download"
     macd_45_data = calculate_45m_macd_batch(watchlist)
     
     records_to_insert = []
+    FETCH_STATUS["message"] = "Processing retrieved data..."
     for item in all_data:
         symbol = item.get("s")
         d_vals = item.get("d", [])
@@ -395,6 +453,7 @@ def _poll_and_save_impl(watchlist, force=False):
             ))
             
     if records_to_insert:
+        FETCH_STATUS["message"] = "Saving records to SQLite database..."
         db_manager.insert_records(records_to_insert)
         print(f"  💾 Saved {len(records_to_insert)} records to SQLite database.")
         
@@ -403,6 +462,7 @@ def _poll_and_save_impl(watchlist, force=False):
         
         # Trigger analyzer
         print("  🔍 Running analyzer...")
+        FETCH_STATUS["message"] = "Analyzing records and updating dashboard..."
         alerts = analyzer.analyze_all_symbols(watchlist)
         print(f"  🔔 Analyzer completed. {len(alerts)} alerts triggered this poll.")
         
@@ -412,12 +472,18 @@ def _poll_and_save_impl(watchlist, force=False):
         if now.hour > 15 or (now.hour == 15 and now.minute >= 30):
             if LAST_EOD_RUN_DATE != current_date_str:
                 print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
+                FETCH_STATUS["message"] = "Running EOD Retrospective..."
                 analyzer.run_eod_retrospective(current_date_str)
                 LAST_EOD_RUN_DATE = current_date_str
                 # Re-generate the dashboard so EOD stats show up
                 analyzer.generate_dashboard(watchlist)
     else:
         print("  ⚠️ No valid records to save.")
+        FETCH_STATUS["message"] = "No valid records retrieved."
+        
+    FETCH_STATUS["running"] = False
+    FETCH_STATUS["progress"] = len(watchlist)
+    FETCH_STATUS["message"] = "Completed successfully"
 
 def main():
     print("==========================================================")
