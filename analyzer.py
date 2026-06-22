@@ -1631,8 +1631,8 @@ def generate_dashboard(symbols):
             </div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-            <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
-                <span class="pulse"></span> LIVE MONITORING
+            <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;" id="monitoring-status-container">
+                <span class="pulse" id="status-pulse"></span> <span id="status-text">LIVE MONITORING</span>
             </div>
             <div class="meta" id="last-updated-meta">Last Updated: <strong>{now_str}</strong></div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -1641,6 +1641,11 @@ def generate_dashboard(symbols):
                     <div style="width: 100%; height: 4px; background: #1e293b; border-radius: 2px; overflow: hidden; display: block;">
                         <div id="fetch-progress-bar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.2s;"></div>
                     </div>
+                </div>
+                <!-- Start/Stop Buttons -->
+                <div style="display: flex; gap: 6px;">
+                    <button id="btn-start" onclick="setTrackingActive(true)" class="btn-fetch" style="background: #10b981; border: none; font-weight: bold; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">▶ Start</button>
+                    <button id="btn-stop" onclick="setTrackingActive(false)" class="btn-fetch" style="background: #ef4444; border: none; font-weight: bold; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">⏸ Stop</button>
                 </div>
                 <button id="btn-force-fetch" onclick="triggerForceFetch()" class="btn-fetch">⚡ Force Fetch TV Data</button>
             </div>
@@ -2398,6 +2403,55 @@ def generate_dashboard(symbols):
             return window.location.protocol === 'file:' ? 'http://localhost:8080' + path : path;
         }}
 
+        function updateTrackingStatusUI(active) {{
+            const btnStart = document.getElementById('btn-start');
+            const btnStop = document.getElementById('btn-stop');
+            const pulse = document.getElementById('status-pulse');
+            const statusText = document.getElementById('status-text');
+            
+            if (active) {{
+                if (btnStart) {{ btnStart.disabled = true; btnStart.style.opacity = 0.5; }}
+                if (btnStop) {{ btnStop.disabled = false; btnStop.style.opacity = 1; }}
+                if (pulse) {{
+                    pulse.style.background = '#10b981';
+                    pulse.style.animation = 'pulsing 1.5s infinite';
+                }}
+                if (statusText) statusText.innerHTML = 'LIVE MONITORING';
+            }} else {{
+                if (btnStart) {{ btnStart.disabled = false; btnStart.style.opacity = 1; }}
+                if (btnStop) {{ btnStop.disabled = true; btnStop.style.opacity = 0.5; }}
+                if (pulse) {{
+                    pulse.style.background = '#9ca3af';
+                    pulse.style.animation = 'none';
+                }}
+                if (statusText) statusText.innerHTML = 'TRACKING STOPPED';
+            }}
+        }}
+
+        async function setTrackingActive(active) {{
+            try {{
+                const r = await fetch(getApiUrl('/config'));
+                if (r.ok) {{
+                    const cfg = await r.json();
+                    cfg.tracking_active = active;
+                    
+                    const saveRes = await fetch(getApiUrl('/config'), {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify(cfg)
+                    }});
+                    if (saveRes.ok) {{
+                        showToast(active ? "▶ Tracking started successfully!" : "⏸ Tracking stopped successfully!", false);
+                        updateTrackingStatusUI(active);
+                    }} else {{
+                        showToast("Error updating tracking state.", true);
+                    }}
+                }}
+            }} catch (e) {{
+                showToast("Connection failed.", true);
+            }}
+        }}
+
         async function loadConfig() {{
             try {{
                 const r = await fetch(getApiUrl('/config'));
@@ -2407,6 +2461,9 @@ def generate_dashboard(symbols):
                     document.getElementById('inp-momentum').value = cfg.momentum_threshold;
                     document.getElementById('inp-increase').value = cfg.min_macd_increase_alert;
                     document.getElementById('cfg-enable-ai').checked = cfg.enable_adaptive_ai_filters || false;
+                    
+                    const trackingActive = cfg.tracking_active !== false;
+                    updateTrackingStatusUI(trackingActive);
                 }}
             }} catch (e) {{
                 console.error("Error loading config:", e);

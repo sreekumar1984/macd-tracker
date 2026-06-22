@@ -113,6 +113,17 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
             self.send_cors_headers()
             self.end_headers()
             self.wfile.write(json.dumps(FETCH_STATUS).encode('utf-8'))
+        elif parsed.path == '/api/dashboard_components':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_cors_headers()
+            self.end_headers()
+            components_file = os.path.join(BASE_DIR, "dashboard_components.json")
+            if os.path.exists(components_file):
+                with open(components_file, "rb") as f:
+                    self.wfile.write(f.read())
+            else:
+                self.wfile.write(json.dumps({}).encode('utf-8'))
         else:
             self.send_response(404)
             self.send_cors_headers()
@@ -130,8 +141,10 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 if os.path.exists(CONFIG_PATH):
                     with open(CONFIG_PATH, "r") as f:
                         old_config = json.load(f)
-                old_config.update(new_config)
+                was_active = old_config.get("tracking_active", True)
+                is_active = new_config.get("tracking_active", True)
                 
+                old_config.update(new_config)
                 with open(CONFIG_PATH, "w") as f:
                     json.dump(old_config, f, indent=2)
                     
@@ -141,6 +154,16 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "saved"}).encode('utf-8'))
                 print("  ⚙️ Config dynamically updated from dashboard Web UI.")
+                
+                # If tracking was off and is now turned on, trigger an immediate background poll
+                if is_active and not was_active:
+                    print("⚡ Tracking activated. Triggering immediate poll in the background...")
+                    def run_immediate_poll():
+                        try:
+                            poll_and_save(WATCHLIST)
+                        except Exception as poll_err:
+                            print(f"Error in immediate background poll: {poll_err}")
+                    threading.Thread(target=run_immediate_poll, daemon=True).start()
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
@@ -338,25 +361,20 @@ def _poll_and_save_impl(watchlist, force=False):
         FETCH_STATUS["message"] = "Refreshing EOD OI Cache from Bhavcopy..."
         refresh_oi_cache()
     
-    # Check if inside market hours
-    if not force and not is_market_hours():
-        print(f"💤 [Market Closed] {timestamp_str} - Outside market hours (9:15 AM - 3:30 PM weekdays). Skipping TradingView API query.")
-        
-        # Check if we should run today's EOD retrospective (in case it hasn't run yet)
-        now = datetime.now()
-        current_date_str = now.strftime("%Y-%m-%d")
-        if now.hour > 15 or (now.hour == 15 and now.minute >= 30):
-            if LAST_EOD_RUN_DATE != current_date_str:
-                print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
-                FETCH_STATUS["message"] = "Running EOD Retrospective..."
+    # Check if we should run today's EOD retrospective (in case it hasn't run yet after 3:30 PM)
+    now = datetime.now()
+    current_date_str = now.strftime("%Y-%m-%d")
+    if now.hour > 15 or (now.hour == 15 and now.minute >= 30):
+        if LAST_EOD_RUN_DATE != current_date_str:
+            print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
+            FETCH_STATUS["message"] = "Running EOD Retrospective..."
+            try:
                 analyzer.run_eod_retrospective(current_date_str)
                 LAST_EOD_RUN_DATE = current_date_str
                 # Re-generate the dashboard so EOD stats show up
                 analyzer.generate_dashboard(watchlist)
-        
-        FETCH_STATUS["running"] = False
-        FETCH_STATUS["message"] = "Skipped (outside market hours)"
-        return
+            except Exception as e:
+                print(f"  ⚠️ Error running EOD Retrospective: {e}")
         
     if force:
         print(f"\n⚡ [Force Fetch Started] {timestamp_str} - Querying {len(watchlist)} F&O symbols (Bypassing market hours)...")
@@ -520,7 +538,10 @@ def main():
     except Exception as e:
         print(f"  ⚠️ Error running startup retrospectives: {e}")
         
-    poll_and_save(watchlist)
+    if config.get("tracking_active", True):
+        poll_and_save(watchlist)
+    else:
+        print("💤 Tracking is currently stopped (inactive in config). Skipping startup poll.")
     
     while True:
         try:
@@ -528,7 +549,10 @@ def main():
             time.sleep(interval_seconds)
             config = load_config()
             interval_seconds = config.get("poll_interval_minutes", 2.0) * 60
-            poll_and_save(watchlist)
+            if config.get("tracking_active", True):
+                poll_and_save(watchlist)
+            else:
+                print("💤 Tracking is currently stopped (inactive in config). Skipping scheduled poll.")
         except KeyboardInterrupt:
             print("\nStopping MACD Momentum Tracker Daemon...")
             sys.exit(0)
