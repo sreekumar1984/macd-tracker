@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import threading
+import logging
 from datetime import datetime, time as datetime_time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
@@ -22,6 +23,32 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 LAST_EOD_RUN_DATE = None
 WATCHLIST = []
 DB_WRITE_LOCK = threading.Lock()
+
+# Setup logging to both file and stdout
+LOG_FILE_PATH = os.path.join(BASE_DIR, "tracker.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE_PATH),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger("tracker")
+
+def log_memory_usage():
+    try:
+        import resource
+        import platform
+        usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        # On macOS, ru_maxrss is in bytes. On Linux, it is in kilobytes.
+        if platform.system() == 'Darwin':
+            usage_mb = usage / (1024 * 1024)
+        else:
+            usage_mb = usage / 1024
+        logger.info(f"💾 Current process RAM usage: {usage_mb:.2f} MB")
+    except Exception as e:
+        pass
 
 # Global status for tracking force fetch progress
 FETCH_STATUS = {
@@ -287,53 +314,69 @@ def tv_to_yf_symbol(symbol):
     return f"{clean_yf}.NS"
 
 def calculate_45m_macd_batch(watchlist):
-    print("  📡 Fetching 45-minute MACD from yfinance...")
+    logger.info("Fetching 45-minute MACD from yfinance...")
     yf_symbols = [tv_to_yf_symbol(sym) for sym in watchlist]
     yf_to_tv = {tv_to_yf_symbol(sym): sym for sym in watchlist}
     
     results = {}
-    try:
-        df = yf.download(yf_symbols, period="10d", interval="15m", group_by="ticker", threads=30, progress=False)
-        for yf_sym in yf_symbols:
-            try:
-                # Check if symbol has data in df
-                if isinstance(df.columns, pd.MultiIndex):
-                    if yf_sym not in df.columns.levels[0]:
+    import gc
+    
+    # Chunk the download into batches of 40 to avoid massive RAM spikes and OOM killer on 1GB instances
+    chunk_size = 40
+    for i in range(0, len(yf_symbols), chunk_size):
+        chunk_yf_symbols = yf_symbols[i:i + chunk_size]
+        logger.info(f"Downloading yfinance batch {i // chunk_size + 1}/{(len(yf_symbols) - 1) // chunk_size + 1} ({len(chunk_yf_symbols)} symbols)...")
+        try:
+            # Using 10 threads instead of 30 to limit CPU credit exhaustion
+            df = yf.download(chunk_yf_symbols, period="10d", interval="15m", group_by="ticker", threads=10, progress=False)
+            
+            for yf_sym in chunk_yf_symbols:
+                try:
+                    # Check if symbol has data in df
+                    if isinstance(df.columns, pd.MultiIndex):
+                        if yf_sym not in df.columns.levels[0]:
+                            continue
+                        sym_df = df[yf_sym]
+                    else:
+                        if len(chunk_yf_symbols) == 1:
+                            sym_df = df
+                        else:
+                            if yf_sym not in df.columns:
+                                continue
+                            sym_df = df[yf_sym]
+                            
+                    if sym_df.empty or 'Close' not in sym_df.columns:
                         continue
-                    sym_df = df[yf_sym].dropna()
-                else:
-                    if yf_sym not in df.columns:
+                        
+                    # Extract only the Close price series to minimize memory during resample
+                    close_series = sym_df['Close'].dropna()
+                    if len(close_series) < 26:
                         continue
-                    sym_df = df[yf_sym].dropna()
+                        
+                    # Resample Close only to 45m
+                    resampled_close = close_series.resample('45min', origin='start_day').last().dropna()
                     
-                if sym_df.empty:
-                    continue
+                    if len(resampled_close) < 26:
+                        continue
+                        
+                    exp1 = resampled_close.ewm(span=12, adjust=False).mean()
+                    exp2 = resampled_close.ewm(span=26, adjust=False).mean()
+                    macd = exp1 - exp2
+                    sig = macd.ewm(span=9, adjust=False).mean()
+                    hist = macd - sig
                     
-                # Resample to 45m
-                resampled = sym_df.resample('45min', origin='start_day').agg({
-                    'Open': 'first',
-                    'High': 'max',
-                    'Low': 'min',
-                    'Close': 'last',
-                    'Volume': 'sum'
-                }).dropna()
-                
-                if len(resampled) < 26:
-                    continue
-                    
-                close_prices = resampled['Close']
-                exp1 = close_prices.ewm(span=12, adjust=False).mean()
-                exp2 = close_prices.ewm(span=26, adjust=False).mean()
-                macd = exp1 - exp2
-                sig = macd.ewm(span=9, adjust=False).mean()
-                hist = macd - sig
-                
-                results[yf_to_tv[yf_sym]] = (float(macd.iloc[-1]), float(sig.iloc[-1]), float(hist.iloc[-1]))
-            except Exception as e:
-                # Ignore individual stock errors
-                pass
-    except Exception as e:
-        print(f"  ⚠️ Error downloading or calculating 45m MACD: {e}")
+                    results[yf_to_tv[yf_sym]] = (float(macd.iloc[-1]), float(sig.iloc[-1]), float(hist.iloc[-1]))
+                except Exception as e:
+                    # Ignore individual stock errors
+                    pass
+            
+            # Explicitly free memory for this chunk
+            del df
+            gc.collect()
+            log_memory_usage()
+        except Exception as e:
+            logger.error(f"Error in yfinance batch: {e}")
+            
     return results
 
 def poll_and_save(watchlist, force=False):

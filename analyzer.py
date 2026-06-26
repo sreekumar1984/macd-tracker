@@ -1494,7 +1494,8 @@ def generate_dashboard(symbols):
         
         .table-wrap {{ max-height: 550px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border); }}
         table {{ width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }}
-        th {{ background: #1e293b; color: var(--text-muted); font-weight: 600; padding: 10px 12px; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }}
+        th {{ background: #1e293b; color: var(--text-muted); font-weight: 600; padding: 10px 12px; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; cursor: pointer; user-select: none; transition: background 0.15s; }}
+        th:hover {{ background: #334155 !important; }}
         td {{ padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }}
         tr:hover {{ background: var(--surface-hover); }}
         .badge {{ display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; }}
@@ -1676,7 +1677,7 @@ def generate_dashboard(symbols):
             <div class="card">
                 <h2>🔔 Recent Alerts Log (Latest 50)</h2>
                 <div class="table-wrap" style="max-height: 200px; margin-bottom: 24px;">
-                    <table>
+                    <table id="alerts-log-table">
                         <thead>
                             <tr>
                                 <th>Time</th>
@@ -2037,6 +2038,9 @@ def generate_dashboard(symbols):
                 
                 if (typeof restoreFilters === 'function') {{
                     restoreFilters();
+                }}
+                if (typeof reapplySorting === 'function') {{
+                    reapplySorting();
                 }}
                 
                 if (activeId) {{
@@ -2589,8 +2593,162 @@ def generate_dashboard(symbols):
             }}, 4000);
         }}
         
+        // Table Sorting Logic
+        const sortStates = {{}};
+
+        function getTableId(table) {{
+            if (table.id) return table.id;
+            const parentDiv = table.closest('div[id]');
+            if (parentDiv) return parentDiv.id + '-table';
+            const allTables = Array.from(document.querySelectorAll('table'));
+            return 'table-' + allTables.indexOf(table);
+        }}
+
+        function getCellValue(row, index) {{
+            const cell = row.children[index];
+            if (!cell) return '';
+            let text = cell.textContent || cell.innerText || '';
+            text = text.trim();
+            if (text === '—' || text === '') return -Infinity;
+            
+            // Clean currency, percentage symbols and commas
+            let cleaned = text.replace(/[₹$,%]/g, '');
+            
+            // Handle K, M, B multipliers
+            if (cleaned.toUpperCase().endsWith('K')) {{
+                const val = parseFloat(cleaned.slice(0, -1));
+                if (!isNaN(val)) return val * 1000;
+            }}
+            if (cleaned.toUpperCase().endsWith('M')) {{
+                const val = parseFloat(cleaned.slice(0, -1));
+                if (!isNaN(val)) return val * 1000000;
+            }}
+            if (cleaned.toUpperCase().endsWith('B')) {{
+                const val = parseFloat(cleaned.slice(0, -1));
+                if (!isNaN(val)) return val * 1000000000;
+            }}
+            
+            // Parse as float if valid number
+            const num = parseFloat(cleaned);
+            if (!isNaN(num) && isFinite(cleaned)) {{
+                return num;
+            }}
+            
+            return text.toLowerCase();
+        }}
+
+        function sortTable(table, colIndex, ascending) {{
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            if (rows.length <= 1) return;
+            
+            const isPlaceholder = (row) => row.querySelector('td[colspan]');
+            const dataRows = rows.filter(row => !isPlaceholder(row));
+            const placeholderRows = rows.filter(row => isPlaceholder(row));
+            
+            if (dataRows.length === 0) return;
+            
+            dataRows.sort((rowA, rowB) => {{
+                const valA = getCellValue(rowA, colIndex);
+                const valB = getCellValue(rowB, colIndex);
+                
+                if (valA === -Infinity) return ascending ? 1 : -1;
+                if (valB === -Infinity) return ascending ? -1 : 1;
+                
+                if (typeof valA === 'number' && typeof valB === 'number') {{
+                    return ascending ? valA - valB : valB - valA;
+                }}
+                
+                const strA = String(valA);
+                const strB = String(valB);
+                return ascending ? strA.localeCompare(strB) : strB.localeCompare(strA);
+            }});
+            
+            tbody.innerHTML = '';
+            dataRows.forEach(row => tbody.appendChild(row));
+            placeholderRows.forEach(row => tbody.appendChild(row));
+        }}
+
+        function updateHeaderIndicators(table, activeColIndex, ascending) {{
+            const headers = table.querySelectorAll('th');
+            headers.forEach((th, idx) => {{
+                let indicator = th.querySelector('.sort-indicator');
+                if (!indicator) {{
+                    indicator = document.createElement('span');
+                    indicator.className = 'sort-indicator';
+                    indicator.style.marginLeft = '6px';
+                    indicator.style.fontSize = '10px';
+                    indicator.style.display = 'inline-block';
+                    th.appendChild(indicator);
+                }}
+                
+                if (idx === activeColIndex) {{
+                    indicator.textContent = ascending ? ' ▲' : ' ▼';
+                    indicator.style.color = '#3b82f6';
+                }} else {{
+                    indicator.textContent = ' ↕';
+                    indicator.style.color = 'rgba(255,255,255,0.2)';
+                }}
+            }});
+        }}
+
+        function reapplySorting() {{
+            document.querySelectorAll('table').forEach(table => {{
+                const tableId = getTableId(table);
+                const state = sortStates[tableId];
+                if (state) {{
+                    sortTable(table, state.colIndex, state.ascending);
+                    updateHeaderIndicators(table, state.colIndex, state.ascending);
+                }} else {{
+                    // Initialize default sort indicators (↕)
+                    table.querySelectorAll('th').forEach((th, idx) => {{
+                        let indicator = th.querySelector('.sort-indicator');
+                        if (!indicator) {{
+                            indicator = document.createElement('span');
+                            indicator.className = 'sort-indicator';
+                            indicator.style.marginLeft = '6px';
+                            indicator.style.fontSize = '10px';
+                            indicator.style.display = 'inline-block';
+                            indicator.textContent = ' ↕';
+                            indicator.style.color = 'rgba(255,255,255,0.2)';
+                            th.appendChild(indicator);
+                        }}
+                    }});
+                }}
+            }});
+        }}
+
+        // Global Event Listener for table header click sorting
+        document.addEventListener('click', function(e) {{
+            const th = e.target.closest('th');
+            if (!th) return;
+            
+            const table = th.closest('table');
+            if (!table) return;
+            
+            // Do not sort if clicked inside an input element (like filter inputs)
+            if (e.target.tagName === 'INPUT') return;
+            
+            const thIndex = Array.from(th.parentNode.children).indexOf(th);
+            const tableId = getTableId(table);
+            
+            // Toggle direction
+            let ascending = true;
+            if (sortStates[tableId] && sortStates[tableId].colIndex === thIndex) {{
+                ascending = !sortStates[tableId].ascending;
+            }}
+            
+            sortStates[tableId] = {{ colIndex: thIndex, ascending: ascending }};
+            
+            sortTable(table, thIndex, ascending);
+            updateHeaderIndicators(table, thIndex, ascending);
+        }});
+
         loadConfig();
         setTimeout(restoreFilters, 100);
+        setTimeout(reapplySorting, 150);
     </script>
 </body>
 </html>

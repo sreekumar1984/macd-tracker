@@ -11,6 +11,8 @@ def init_db():
     
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
     
     # Create tables if not exists
     cursor.execute("""
