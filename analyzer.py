@@ -1081,6 +1081,8 @@ def generate_dashboard(symbols):
     
     # Load recent alerts
     recent_alerts = get_latest_alerts_from_log(50)
+    recent_alerts_large = get_latest_alerts_from_log(500)
+    alerts_json_str = json.dumps(recent_alerts_large).replace("{", "{{").replace("}", "}}")
     
     # Get DB size on disk
     size_mb = db_manager.get_db_size_mb()
@@ -1665,6 +1667,7 @@ def generate_dashboard(symbols):
     <div class="tabs-header">
         <button id="btn-tab-dashboard" class="tab-btn active" onclick="switchTab('dashboard')">📊 Live Dashboard</button>
         <button id="btn-tab-dryup" class="tab-btn" onclick="switchTab('dryup')">💧 Volume Dry-up</button>
+        <button id="btn-tab-focus" class="tab-btn" onclick="switchTab('focus')">⭐ Focus Panel</button>
         <button id="btn-tab-retro" class="tab-btn" onclick="switchTab('retro')">🔍 EOD Retrospection</button>
         <button id="btn-tab-ai" class="tab-btn" onclick="switchTab('ai')">🤖 AI Optimizer</button>
         <button id="btn-tab-config" class="tab-btn" onclick="switchTab('config')">⚙️ Configuration</button>
@@ -1861,6 +1864,87 @@ def generate_dashboard(symbols):
         </div>
     </div>
     
+    <!-- Tab: Focus Panel -->
+    <div id="tab-focus" class="tab-content">
+        <div class="container">
+            <!-- Focus config card -->
+            <div class="card" style="max-width: 1000px; margin: 0 auto 24px auto;">
+                <h2>⭐ Focus Filter Configuration</h2>
+                <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
+                    Customize focus alerts parameters. This panel screens triggered alerts based on minimum Volume Ratio, Severity, and type.
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-vol-ratio">💧 Min Vol Ratio %</label>
+                        <input type="number" id="inp-focus-vol-ratio" value="200" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-severity">⚠️ Min Severity</label>
+                        <select id="inp-focus-severity" onchange="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer;">
+                            <option value="CRITICAL" selected>CRITICAL</option>
+                            <option value="HIGH">HIGH and above</option>
+                            <option value="MEDIUM">MEDIUM and above</option>
+                            <option value="INFO">INFO and above</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-type">🔔 Trigger Type</label>
+                        <select id="inp-focus-type" onchange="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer;">
+                            <option value="ALL" selected>ALL TRIGGERS</option>
+                            <option value="BULLISH_CROSSOVER">BULLISH CROSSOVER</option>
+                            <option value="BEARISH_CROSSOVER">BEARISH CROSSOVER</option>
+                            <option value="MOMENTUM_START">MOMENTUM START</option>
+                            <option value="VOLUME_DRYUP">VOLUME DRYUP</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-sort-col">📊 Sort By</label>
+                        <select id="inp-focus-sort-col" onchange="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer;">
+                            <option value="vol_ratio" selected>Volume Ratio</option>
+                            <option value="timestamp">Alert Time</option>
+                            <option value="severity">Severity</option>
+                            <option value="symbol">Symbol</option>
+                            <option value="price">Price</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-sort-order">↕️ Sort Order</label>
+                        <select id="inp-focus-sort-order" onchange="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer;">
+                            <option value="desc" selected>Descending</option>
+                            <option value="asc">Ascending</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Focus table card -->
+            <div class="card" style="max-width: 1000px; margin: 0 auto;">
+                <h2>⭐ Focus Alerts Screener</h2>
+                <div class="table-wrap" style="max-height: 500px;">
+                    <table id="focus-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Symbol</th>
+                                <th>Price</th>
+                                <th>Severity</th>
+                                <th>Trigger</th>
+                                <th>Message</th>
+                                <th>Volume Ratio %</th>
+                                <th>MACD (15m)</th>
+                                <th>RSI (15m)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="focus-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tab 3: EOD Retrospection -->
     <div id="tab-retro" class="tab-content">
         <div class="container" style="max-width: 1100px; margin: 0 auto;">
@@ -1959,6 +2043,10 @@ def generate_dashboard(symbols):
                 document.getElementById('btn-tab-dryup').classList.add('active');
                 document.getElementById('tab-dryup').classList.add('active-content');
                 localStorage.setItem('activeTab', 'dryup');
+            }} else if (tabName === 'focus') {{
+                document.getElementById('btn-tab-focus').classList.add('active');
+                document.getElementById('tab-focus').classList.add('active-content');
+                localStorage.setItem('activeTab', 'focus');
             }} else if (tabName === 'retro') {{
                 document.getElementById('btn-tab-retro').classList.add('active');
                 document.getElementById('tab-retro').classList.add('active-content');
@@ -2018,7 +2106,8 @@ def generate_dashboard(symbols):
                     '#tab-retro',
                     '#tab-ai',
                     '#db-size-info',
-                    '#last-updated-meta'
+                    '#last-updated-meta',
+                    '#raw-alerts-json'
                 ];
                 
                 selectors.forEach(selector => {{
@@ -2041,6 +2130,9 @@ def generate_dashboard(symbols):
                 }}
                 if (typeof reapplySorting === 'function') {{
                     reapplySorting();
+                }}
+                if (typeof renderFocusAlerts === 'function') {{
+                    renderFocusAlerts();
                 }}
                 
                 if (activeId) {{
@@ -2746,10 +2838,116 @@ def generate_dashboard(symbols):
             updateHeaderIndicators(table, thIndex, ascending);
         }});
 
+        let allRecentAlerts = [];
+
+        function renderFocusAlerts() {{
+            const jsonEl = document.getElementById('raw-alerts-json');
+            if (jsonEl) {{
+                try {{
+                    allRecentAlerts = JSON.parse(jsonEl.textContent.trim());
+                }} catch (e) {{
+                    console.error("Error parsing raw alerts JSON:", e);
+                }}
+            }}
+            
+            const tbody = document.getElementById('focus-table-body');
+            if (!tbody) return;
+            
+            const minVolRatio = parseFloat(document.getElementById('inp-focus-vol-ratio').value) || 0;
+            const minSeverity = document.getElementById('inp-focus-severity').value;
+            const alertTypeFilter = document.getElementById('inp-focus-type').value;
+            const sortCol = document.getElementById('inp-focus-sort-col').value;
+            const sortOrder = document.getElementById('inp-focus-sort-order').value;
+            
+            const severityOrder = {{ 'INFO': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 }};
+            const minSevLevel = severityOrder[minSeverity] || 1;
+            
+            let filtered = allRecentAlerts.filter(a => {{
+                const vol = a.volume;
+                const avgVol = a.average_volume;
+                const ratio = (vol && avgVol && avgVol > 0) ? ((vol / avgVol) * 100) : 0;
+                
+                if (ratio < minVolRatio) return false;
+                
+                const aSev = a.severity || 'INFO';
+                const aSevLevel = severityOrder[aSev] || 1;
+                if (aSevLevel < minSevLevel) return false;
+                
+                if (alertTypeFilter !== 'ALL' && a.alert_type !== alertTypeFilter) return false;
+                
+                return true;
+            }});
+            
+            filtered.sort((x, y) => {{
+                let valX, valY;
+                
+                if (sortCol === 'vol_ratio') {{
+                    valX = (x.volume && x.average_volume && x.average_volume > 0) ? ((x.volume / x.average_volume) * 100) : 0;
+                    valY = (y.volume && y.average_volume && y.average_volume > 0) ? ((y.volume / y.average_volume) * 100) : 0;
+                }} else if (sortCol === 'severity') {{
+                    valX = severityOrder[x.severity || 'INFO'] || 1;
+                    valY = severityOrder[y.severity || 'INFO'] || 1;
+                }} else if (sortCol === 'price') {{
+                    valX = x.price || 0;
+                    valY = y.price || 0;
+                }} else if (sortCol === 'symbol') {{
+                    valX = (x.symbol || '').toLowerCase();
+                    valY = (y.symbol || '').toLowerCase();
+                }} else {{
+                    valX = x.timestamp || '';
+                    valY = y.timestamp || '';
+                }}
+                
+                if (valX === valY) return 0;
+                
+                const asc = (sortOrder === 'asc');
+                if (typeof valX === 'number' && typeof valY === 'number') {{
+                    return asc ? valX - valY : valY - valX;
+                }}
+                
+                const strX = String(valX);
+                const strY = String(valY);
+                return asc ? strX.localeCompare(strY) : strY.localeCompare(strX);
+            }});
+            
+            if (filtered.length === 0) {{
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 40px; color: var(--text-muted);">No important alerts match the selected criteria. Try adjusting the thresholds.</td></tr>';
+                return;
+            }}
+            
+            let htmlRows = '';
+            filtered.forEach(a => {{
+                const sevColor = a.severity === 'CRITICAL' ? '#ef4444' : a.severity === 'HIGH' ? '#f97316' : a.severity === 'MEDIUM' ? '#eab308' : '#3b82f6';
+                const rsiVal = a.rsi;
+                const rsiStr = rsiVal !== null && rsiVal !== undefined ? rsiVal.toFixed(1) : '—';
+                const vol = a.volume;
+                const avgVol = a.average_volume;
+                const ratio = (vol && avgVol && avgVol > 0) ? ((vol / avgVol) * 100) : 0;
+                
+                htmlRows += `
+                <tr>
+                    <td>${{a.timestamp}}</td>
+                    <td style="font-weight: bold; color: #fff;">${{a.symbol}}</td>
+                    <td>₹${{a.price.toFixed(2)}}</td>
+                    <td><span style="color: ${{sevColor}}; font-weight: bold; background: ${{sevColor}}18; padding: 2px 8px; border-radius: 12px; font-size: 11px;">${{a.severity}}</span></td>
+                    <td>${{a.alert_type}}</td>
+                    <td style="color: #cbd5e1;">${{a.message}}</td>
+                    <td style="font-weight: bold; color: ${{ratio >= 200 ? '#10b981' : '#fbbf24'}}">${{ratio.toFixed(1)}}%</td>
+                    <td>${{a.macd_line.toFixed(3)}}</td>
+                    <td>${{rsiStr}}</td>
+                </tr>
+                `;
+            }});
+            
+            tbody.innerHTML = htmlRows;
+        }}
+
         loadConfig();
         setTimeout(restoreFilters, 100);
         setTimeout(reapplySorting, 150);
+        setTimeout(renderFocusAlerts, 160);
     </script>
+    <div id="raw-alerts-json" style="display:none;">{alerts_json_str}</div>
 </body>
 </html>
 """
