@@ -259,14 +259,14 @@
             <h1>📊 MACD Momentum & Crossover Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <span class="meta">Monitoring all F&O stocks every 2 minutes</span>
-                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 5.12 MB (Capped at 30 Days)</span>
+                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 5.56 MB (Capped at 30 Days)</span>
             </div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
             <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;" id="monitoring-status-container">
                 <span class="pulse" id="status-pulse"></span> <span id="status-text">LIVE MONITORING</span>
             </div>
-            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-26 12:30:57</strong></div>
+            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-26 12:48:44</strong></div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div id="fetch-progress-container" style="display: none; font-size: 11px; text-align: right; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px; color: #60a5fa; min-width: 180px;">
                     <div id="fetch-progress-text" style="font-weight: 600; margin-bottom: 2px;">Initializing...</div>
@@ -10276,163 +10276,19 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <h2 style="margin-bottom: 0;">📝 System Log Viewer (Latest 300 lines)</h2>
-                    <button onclick="updateDashboardSeamlessly()" class="btn-reset-filters">🔄 Refresh Logs</button>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: white; font-weight: bold; font-size: 13px;">
+                            <input type="checkbox" id="cfg-enable-logging" onchange="toggleEnableLogging(this)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);"> 
+                            Enable System Logging
+                        </label>
+                        <button onclick="clearSystemLogs()" class="btn-reset-filters" style="background: #ef4444; border: none; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">🗑️ Clear Logs</button>
+                        <button onclick="updateDashboardSeamlessly()" class="btn-reset-filters">🔄 Refresh Logs</button>
+                    </div>
                 </div>
                 <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
                     Live logs from the daemon process tracking API requests, calculations, database writes, and memory metrics.
                 </div>
-                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 11:50:23,591 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 11:50:24,316 [INFO] tracker: 💾 Current process RAM usage: 215.89 MB
-2026-06-26 11:52:58,862 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 11:52:58,862 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 11:53:00,267 [INFO] tracker: 💾 Current process RAM usage: 218.08 MB
-2026-06-26 11:53:00,267 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 11:53:01,436 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:53:02,232 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 11:53:02,233 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:53:02,290 [INFO] tracker: 💾 Current process RAM usage: 218.72 MB
-2026-06-26 11:53:02,290 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 11:53:03,397 [INFO] tracker: 💾 Current process RAM usage: 219.53 MB
-2026-06-26 11:53:03,397 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 11:53:04,769 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:53:04,779 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 11:53:04,779 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:53:04,855 [INFO] tracker: 💾 Current process RAM usage: 220.44 MB
-2026-06-26 11:53:04,855 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 11:53:05,962 [INFO] tracker: 💾 Current process RAM usage: 221.09 MB
-2026-06-26 11:53:05,962 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 11:53:06,625 [INFO] tracker: 💾 Current process RAM usage: 221.09 MB
-2026-06-26 11:55:41,269 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 11:55:41,272 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 11:55:42,600 [INFO] tracker: 💾 Current process RAM usage: 224.05 MB
-2026-06-26 11:55:42,600 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 11:55:43,404 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:55:44,091 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 11:55:44,091 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:55:44,145 [INFO] tracker: 💾 Current process RAM usage: 225.36 MB
-2026-06-26 11:55:44,145 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 11:55:45,633 [INFO] tracker: 💾 Current process RAM usage: 226.33 MB
-2026-06-26 11:55:45,633 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 11:55:47,333 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:55:47,429 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 11:55:47,429 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:55:47,493 [INFO] tracker: 💾 Current process RAM usage: 227.25 MB
-2026-06-26 11:55:47,493 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 11:55:48,694 [INFO] tracker: 💾 Current process RAM usage: 227.61 MB
-2026-06-26 11:55:48,694 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 11:55:49,258 [INFO] tracker: 💾 Current process RAM usage: 227.61 MB
-2026-06-26 11:58:23,531 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 11:58:23,533 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 11:58:25,324 [INFO] tracker: 💾 Current process RAM usage: 228.45 MB
-2026-06-26 11:58:25,324 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 11:58:26,441 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:58:26,923 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 11:58:26,923 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:58:26,969 [INFO] tracker: 💾 Current process RAM usage: 229.97 MB
-2026-06-26 11:58:26,970 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 11:58:28,615 [INFO] tracker: 💾 Current process RAM usage: 230.61 MB
-2026-06-26 11:58:28,616 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 11:58:30,046 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:58:30,060 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 11:58:30,061 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 11:58:30,145 [INFO] tracker: 💾 Current process RAM usage: 231.78 MB
-2026-06-26 11:58:30,145 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 11:58:31,375 [INFO] tracker: 💾 Current process RAM usage: 233.02 MB
-2026-06-26 11:58:31,375 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 11:58:31,904 [INFO] tracker: 💾 Current process RAM usage: 233.02 MB
-2026-06-26 12:01:06,495 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 12:01:06,496 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 12:01:08,788 [INFO] tracker: 💾 Current process RAM usage: 233.95 MB
-2026-06-26 12:01:08,788 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 12:01:10,096 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:01:10,672 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:01:10,672 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:01:10,716 [INFO] tracker: 💾 Current process RAM usage: 234.69 MB
-2026-06-26 12:01:10,716 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 12:01:12,015 [INFO] tracker: 💾 Current process RAM usage: 235.08 MB
-2026-06-26 12:01:12,015 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 12:01:14,346 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:01:15,151 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:01:15,152 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:01:15,213 [INFO] tracker: 💾 Current process RAM usage: 236.33 MB
-2026-06-26 12:01:15,213 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 12:01:18,487 [INFO] tracker: 💾 Current process RAM usage: 236.62 MB
-2026-06-26 12:01:18,487 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 12:01:19,680 [INFO] tracker: 💾 Current process RAM usage: 236.62 MB
-2026-06-26 12:03:54,659 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 12:03:54,660 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 12:03:56,228 [INFO] tracker: 💾 Current process RAM usage: 237.64 MB
-2026-06-26 12:03:56,228 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 12:03:56,958 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:03:57,813 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:03:57,814 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:03:57,872 [INFO] tracker: 💾 Current process RAM usage: 238.73 MB
-2026-06-26 12:03:57,872 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 12:03:59,104 [INFO] tracker: 💾 Current process RAM usage: 239.05 MB
-2026-06-26 12:03:59,104 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 12:04:00,548 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:04:00,555 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:04:00,555 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:04:00,628 [INFO] tracker: 💾 Current process RAM usage: 239.91 MB
-2026-06-26 12:04:00,628 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 12:04:01,924 [INFO] tracker: 💾 Current process RAM usage: 240.44 MB
-2026-06-26 12:04:01,925 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 12:04:02,458 [INFO] tracker: 💾 Current process RAM usage: 240.48 MB
-2026-06-26 12:06:36,742 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 12:06:36,744 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 12:06:38,407 [INFO] tracker: 💾 Current process RAM usage: 240.94 MB
-2026-06-26 12:06:38,407 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 12:06:39,233 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:06:39,813 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:06:39,813 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:06:39,853 [INFO] tracker: 💾 Current process RAM usage: 242.45 MB
-2026-06-26 12:06:39,853 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 12:06:41,049 [INFO] tracker: 💾 Current process RAM usage: 242.89 MB
-2026-06-26 12:06:41,049 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 12:06:42,429 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:06:42,642 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:06:42,643 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:06:42,709 [INFO] tracker: 💾 Current process RAM usage: 243.03 MB
-2026-06-26 12:06:42,709 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 12:06:43,995 [INFO] tracker: 💾 Current process RAM usage: 244.44 MB
-2026-06-26 12:06:43,995 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 12:06:44,502 [INFO] tracker: 💾 Current process RAM usage: 244.44 MB
-2026-06-26 12:09:18,960 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 12:09:18,961 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 12:09:20,150 [INFO] tracker: 💾 Current process RAM usage: 244.81 MB
-2026-06-26 12:09:20,150 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 12:09:21,110 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:09:21,690 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:09:21,690 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:09:21,731 [INFO] tracker: 💾 Current process RAM usage: 245.48 MB
-2026-06-26 12:09:21,731 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 12:09:22,908 [INFO] tracker: 💾 Current process RAM usage: 246.16 MB
-2026-06-26 12:09:22,908 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 12:09:24,181 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:09:24,182 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 12:09:24,182 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 12:09:24,268 [INFO] tracker: 💾 Current process RAM usage: 246.48 MB
-2026-06-26 12:09:24,268 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 12:09:25,355 [INFO] tracker: 💾 Current process RAM usage: 247.52 MB
-2026-06-26 12:09:25,355 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 12:09:25,854 [INFO] tracker: 💾 Current process RAM usage: 247.52 MB
-2026-06-26 12:12:00,448 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 12:12:00,449 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 12:12:01,728 [INFO] tracker: 💾 Current process RAM usage: 249.97 MB
+                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 12:12:01,728 [INFO] tracker: 💾 Current process RAM usage: 249.97 MB
 2026-06-26 12:12:01,728 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
 2026-06-26 12:12:02,462 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
 2026-06-26 12:12:03,234 [ERROR] yfinance: 
@@ -10581,7 +10437,162 @@
 2026-06-26 12:30:25,907 [INFO] tracker: 💾 Current process RAM usage: 214.73 MB
 2026-06-26 12:30:25,907 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
 2026-06-26 12:30:26,714 [INFO] tracker: 💾 Current process RAM usage: 214.75 MB
+2026-06-26 12:31:29,099 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-26 12:31:29,100 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-26 12:31:33,854 [INFO] tracker: 💾 Current process RAM usage: 212.72 MB
+2026-06-26 12:31:33,854 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-26 12:31:38,474 [ERROR] yfinance: HTTP Error 404: {{"quoteSummary":{{"result":null,"error":{{"code":"Not Found","description":"Quote not found for symbol: NIFTY-FIN-SERVICE.NS"}}}}}}
+2026-06-26 12:31:39,941 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:31:39,943 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:31:39,943 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:31:40,014 [INFO] tracker: 💾 Current process RAM usage: 214.61 MB
+2026-06-26 12:31:40,014 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-26 12:31:43,126 [INFO] tracker: 💾 Current process RAM usage: 218.11 MB
+2026-06-26 12:31:43,126 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-26 12:31:46,840 [ERROR] yfinance: HTTP Error 404: {{"quoteSummary":{{"result":null,"error":{{"code":"Not Found","description":"Quote not found for symbol: NIFTYNXT50.NS"}}}}}}
+2026-06-26 12:31:48,728 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:31:48,735 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:31:48,736 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:31:48,807 [INFO] tracker: 💾 Current process RAM usage: 218.97 MB
+2026-06-26 12:31:48,807 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-26 12:31:52,191 [INFO] tracker: 💾 Current process RAM usage: 220.58 MB
+2026-06-26 12:31:52,191 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-26 12:31:53,687 [INFO] tracker: 💾 Current process RAM usage: 221.06 MB
+2026-06-26 12:34:28,066 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-26 12:34:28,066 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-26 12:34:34,270 [INFO] tracker: 💾 Current process RAM usage: 223.53 MB
+2026-06-26 12:34:34,270 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-26 12:34:35,625 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:34:35,629 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:34:35,629 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:34:35,710 [INFO] tracker: 💾 Current process RAM usage: 224.58 MB
+2026-06-26 12:34:35,710 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-26 12:34:36,867 [INFO] tracker: 💾 Current process RAM usage: 225.69 MB
+2026-06-26 12:34:36,868 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-26 12:34:43,314 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:34:43,320 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:34:43,320 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:34:43,399 [INFO] tracker: 💾 Current process RAM usage: 226.38 MB
+2026-06-26 12:34:43,399 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-26 12:34:44,564 [INFO] tracker: 💾 Current process RAM usage: 227.58 MB
+2026-06-26 12:34:44,564 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-26 12:34:45,043 [INFO] tracker: 💾 Current process RAM usage: 228.05 MB
+2026-06-26 12:37:19,588 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-26 12:37:19,590 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-26 12:37:26,393 [INFO] tracker: 💾 Current process RAM usage: 229.30 MB
+2026-06-26 12:37:26,393 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-26 12:37:28,964 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:37:29,502 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:37:29,502 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:37:29,566 [INFO] tracker: 💾 Current process RAM usage: 230.16 MB
+2026-06-26 12:37:29,566 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-26 12:37:33,936 [INFO] tracker: 💾 Current process RAM usage: 230.78 MB
+2026-06-26 12:37:33,936 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-26 12:37:37,390 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:37:37,746 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:37:37,746 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:37:37,796 [INFO] tracker: 💾 Current process RAM usage: 231.42 MB
+2026-06-26 12:37:37,796 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-26 12:37:44,869 [INFO] tracker: 💾 Current process RAM usage: 232.22 MB
+2026-06-26 12:37:44,869 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-26 12:37:47,352 [INFO] tracker: 💾 Current process RAM usage: 232.22 MB
+2026-06-26 12:40:22,362 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-26 12:40:22,363 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-26 12:40:23,505 [INFO] tracker: 💾 Current process RAM usage: 234.17 MB
+2026-06-26 12:40:23,505 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-26 12:40:24,804 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:40:28,710 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:40:28,710 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:40:28,756 [INFO] tracker: 💾 Current process RAM usage: 235.19 MB
+2026-06-26 12:40:28,756 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-26 12:40:34,815 [INFO] tracker: 💾 Current process RAM usage: 236.14 MB
+2026-06-26 12:40:34,815 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-26 12:40:36,447 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:40:40,783 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:40:40,784 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:40:40,850 [INFO] tracker: 💾 Current process RAM usage: 236.72 MB
+2026-06-26 12:40:40,850 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-26 12:40:43,142 [INFO] tracker: 💾 Current process RAM usage: 236.72 MB
+2026-06-26 12:40:43,143 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-26 12:40:47,686 [INFO] tracker: 💾 Current process RAM usage: 237.17 MB
+2026-06-26 12:43:22,890 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-26 12:43:22,891 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-26 12:43:24,819 [INFO] tracker: 💾 Current process RAM usage: 244.14 MB
+2026-06-26 12:43:24,819 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-26 12:43:26,952 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:43:31,097 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:43:31,097 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:43:31,153 [INFO] tracker: 💾 Current process RAM usage: 244.89 MB
+2026-06-26 12:43:31,153 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-26 12:43:32,242 [INFO] tracker: 💾 Current process RAM usage: 245.59 MB
+2026-06-26 12:43:32,242 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-26 12:43:33,605 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:43:33,615 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:43:33,616 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:43:33,685 [INFO] tracker: 💾 Current process RAM usage: 246.17 MB
+2026-06-26 12:43:33,686 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-26 12:43:39,232 [INFO] tracker: 💾 Current process RAM usage: 246.80 MB
+2026-06-26 12:43:39,232 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-26 12:43:39,723 [INFO] tracker: 💾 Current process RAM usage: 246.80 MB
+2026-06-26 12:46:14,619 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-26 12:46:14,620 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-26 12:46:20,561 [INFO] tracker: 💾 Current process RAM usage: 248.31 MB
+2026-06-26 12:46:20,561 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-26 12:46:22,186 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:46:22,242 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:46:22,242 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:46:22,299 [INFO] tracker: 💾 Current process RAM usage: 248.88 MB
+2026-06-26 12:46:22,299 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-26 12:46:27,982 [INFO] tracker: 💾 Current process RAM usage: 249.48 MB
+2026-06-26 12:46:27,982 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-26 12:46:29,407 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:46:29,847 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:46:29,847 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:46:29,904 [INFO] tracker: 💾 Current process RAM usage: 250.08 MB
+2026-06-26 12:46:29,905 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-26 12:46:35,855 [INFO] tracker: 💾 Current process RAM usage: 250.83 MB
+2026-06-26 12:46:35,855 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-26 12:46:36,353 [INFO] tracker: 💾 Current process RAM usage: 250.83 MB
+2026-06-26 12:48:19,437 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-26 12:48:19,438 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-26 12:48:25,775 [INFO] tracker: 💾 Current process RAM usage: 208.95 MB
+2026-06-26 12:48:25,775 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-26 12:48:27,200 [ERROR] yfinance: HTTP Error 404: {{"quoteSummary":{{"result":null,"error":{{"code":"Not Found","description":"Quote not found for symbol: NIFTY-FIN-SERVICE.NS"}}}}}}
+2026-06-26 12:48:27,880 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:48:27,889 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:48:27,889 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:48:27,945 [INFO] tracker: 💾 Current process RAM usage: 210.47 MB
+2026-06-26 12:48:27,945 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-26 12:48:34,040 [INFO] tracker: 💾 Current process RAM usage: 213.16 MB
+2026-06-26 12:48:34,040 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-26 12:48:35,238 [ERROR] yfinance: HTTP Error 404: {{"quoteSummary":{{"result":null,"error":{{"code":"Not Found","description":"Quote not found for symbol: NIFTYNXT50.NS"}}}}}}
+2026-06-26 12:48:35,913 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:48:42,743 [ERROR] yfinance: 
+1 Failed download:
+2026-06-26 12:48:42,743 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-26 12:48:42,801 [INFO] tracker: 💾 Current process RAM usage: 214.72 MB
+2026-06-26 12:48:42,801 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-26 12:48:43,922 [INFO] tracker: 💾 Current process RAM usage: 216.67 MB
+2026-06-26 12:48:43,922 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-26 12:48:44,412 [INFO] tracker: 💾 Current process RAM usage: 216.67 MB
 </pre>
+                <div id="system-logs-disabled-message" style="display: none; padding: 40px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 8px; background: #0f172a;">
+                    <span style="font-size: 24px; display: block; margin-bottom: 8px;">⏸️</span>
+                    System logging is disabled. Check the box above to enable logging and see live updates.
+                </div>
             </div>
         </div>
     </div>
@@ -11130,6 +11141,14 @@
                     document.getElementById('inp-increase').value = cfg.min_macd_increase_alert;
                     document.getElementById('cfg-enable-ai').checked = cfg.enable_adaptive_ai_filters || false;
                     
+                    const loggingEnabled = cfg.logging_enabled !== false;
+                    const loggingCb = document.getElementById('cfg-enable-logging');
+                    if (loggingCb) loggingCb.checked = loggingEnabled;
+                    const logPre = document.getElementById('system-logs-content');
+                    if (logPre) logPre.style.display = loggingEnabled ? 'block' : 'none';
+                    const logPlaceholder = document.getElementById('system-logs-disabled-message');
+                    if (logPlaceholder) logPlaceholder.style.display = loggingEnabled ? 'none' : 'block';
+                    
                     const trackingActive = cfg.tracking_active !== false;
                     updateTrackingStatusUI(trackingActive);
                 }
@@ -11143,7 +11162,8 @@
                 poll_interval_minutes: parseFloat(document.getElementById('inp-interval').value),
                 momentum_threshold: parseFloat(document.getElementById('inp-momentum').value),
                 min_macd_increase_alert: parseFloat(document.getElementById('inp-increase').value),
-                enable_adaptive_ai_filters: document.getElementById('cfg-enable-ai').checked
+                enable_adaptive_ai_filters: document.getElementById('cfg-enable-ai').checked,
+                logging_enabled: document.getElementById('cfg-enable-logging') ? document.getElementById('cfg-enable-logging').checked : true
             };
             
             try {
@@ -11503,6 +11523,50 @@
             });
             
             tbody.innerHTML = htmlRows;
+        }
+
+        async function clearSystemLogs() {
+            if (!confirm("Are you sure you want to clear all system logs? This will truncate the log file on the server.")) return;
+            try {
+                const r = await fetch(getApiUrl('/clear_logs'), { method: 'POST' });
+                if (r.ok) {
+                    showToast("📝 Logs successfully cleared!", false);
+                    const pre = document.getElementById('system-logs-content');
+                    if (pre) pre.textContent = "Logs cleared.";
+                } else {
+                    showToast("Error clearing logs.", true);
+                }
+            } catch (e) {
+                showToast("Connection failed.", true);
+            }
+        }
+
+        async function toggleEnableLogging(cb) {
+            const enabled = cb.checked;
+            const pre = document.getElementById('system-logs-content');
+            if (pre) {
+                pre.style.display = enabled ? 'block' : 'none';
+            }
+            const placeholder = document.getElementById('system-logs-disabled-message');
+            if (placeholder) {
+                placeholder.style.display = enabled ? 'none' : 'block';
+            }
+            
+            try {
+                const r = await fetch(getApiUrl('/config'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ logging_enabled: enabled })
+                });
+                if (r.ok) {
+                    showToast(enabled ? "📝 System logging enabled!" : "⏸ System logging disabled!", false);
+                    updateDashboardSeamlessly();
+                } else {
+                    showToast("Error updating logging state.", true);
+                }
+            } catch (e) {
+                showToast("Connection failed.", true);
+            }
         }
 
         loadConfig();

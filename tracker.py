@@ -36,6 +36,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger("tracker")
 
+def update_logging_level():
+    config = load_config()
+    if config.get("logging_enabled", True):
+        logger.setLevel(logging.INFO)
+    else:
+        logger.setLevel(logging.WARNING)
+
 def log_memory_usage():
     try:
         import resource
@@ -174,6 +181,8 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 old_config.update(new_config)
                 with open(CONFIG_PATH, "w") as f:
                     json.dump(old_config, f, indent=2)
+                
+                update_logging_level()
                     
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
@@ -235,6 +244,23 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "started", "message": "Force fetch started in background"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+        elif parsed.path == '/clear_logs':
+            try:
+                if os.path.exists(LOG_FILE_PATH):
+                    with open(LOG_FILE_PATH, "w") as f:
+                        f.write("")
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "cleared"}).encode('utf-8'))
+                print("  📝 System log file cleared via dashboard UI request.")
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
@@ -552,6 +578,7 @@ def main():
     print("==========================================================")
     
     db_manager.init_db()
+    update_logging_level()
     
     global WATCHLIST
     WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
@@ -591,6 +618,7 @@ def main():
             print(f"\nSleeping for {config.get('poll_interval_minutes')} minutes...")
             time.sleep(interval_seconds)
             config = load_config()
+            update_logging_level()
             interval_seconds = config.get("poll_interval_minutes", 2.0) * 60
             if config.get("tracking_active", True):
                 poll_and_save(watchlist)

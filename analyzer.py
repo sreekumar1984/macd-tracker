@@ -2048,12 +2048,23 @@ def generate_dashboard(symbols):
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <h2 style="margin-bottom: 0;">📝 System Log Viewer (Latest 300 lines)</h2>
-                    <button onclick="updateDashboardSeamlessly()" class="btn-reset-filters">🔄 Refresh Logs</button>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: white; font-weight: bold; font-size: 13px;">
+                            <input type="checkbox" id="cfg-enable-logging" onchange="toggleEnableLogging(this)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);"> 
+                            Enable System Logging
+                        </label>
+                        <button onclick="clearSystemLogs()" class="btn-reset-filters" style="background: #ef4444; border: none; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">🗑️ Clear Logs</button>
+                        <button onclick="updateDashboardSeamlessly()" class="btn-reset-filters">🔄 Refresh Logs</button>
+                    </div>
                 </div>
                 <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
                     Live logs from the daemon process tracking API requests, calculations, database writes, and memory metrics.
                 </div>
                 <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">{tracker_logs_text}</pre>
+                <div id="system-logs-disabled-message" style="display: none; padding: 40px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 8px; background: #0f172a;">
+                    <span style="font-size: 24px; display: block; margin-bottom: 8px;">⏸️</span>
+                    System logging is disabled. Check the box above to enable logging and see live updates.
+                </div>
             </div>
         </div>
     </div>
@@ -2602,6 +2613,14 @@ def generate_dashboard(symbols):
                     document.getElementById('inp-increase').value = cfg.min_macd_increase_alert;
                     document.getElementById('cfg-enable-ai').checked = cfg.enable_adaptive_ai_filters || false;
                     
+                    const loggingEnabled = cfg.logging_enabled !== false;
+                    const loggingCb = document.getElementById('cfg-enable-logging');
+                    if (loggingCb) loggingCb.checked = loggingEnabled;
+                    const logPre = document.getElementById('system-logs-content');
+                    if (logPre) logPre.style.display = loggingEnabled ? 'block' : 'none';
+                    const logPlaceholder = document.getElementById('system-logs-disabled-message');
+                    if (logPlaceholder) logPlaceholder.style.display = loggingEnabled ? 'none' : 'block';
+                    
                     const trackingActive = cfg.tracking_active !== false;
                     updateTrackingStatusUI(trackingActive);
                 }}
@@ -2615,7 +2634,8 @@ def generate_dashboard(symbols):
                 poll_interval_minutes: parseFloat(document.getElementById('inp-interval').value),
                 momentum_threshold: parseFloat(document.getElementById('inp-momentum').value),
                 min_macd_increase_alert: parseFloat(document.getElementById('inp-increase').value),
-                enable_adaptive_ai_filters: document.getElementById('cfg-enable-ai').checked
+                enable_adaptive_ai_filters: document.getElementById('cfg-enable-ai').checked,
+                logging_enabled: document.getElementById('cfg-enable-logging') ? document.getElementById('cfg-enable-logging').checked : true
             }};
             
             try {{
@@ -2975,6 +2995,50 @@ def generate_dashboard(symbols):
             }});
             
             tbody.innerHTML = htmlRows;
+        }}
+
+        async function clearSystemLogs() {{
+            if (!confirm("Are you sure you want to clear all system logs? This will truncate the log file on the server.")) return;
+            try {{
+                const r = await fetch(getApiUrl('/clear_logs'), {{ method: 'POST' }});
+                if (r.ok) {{
+                    showToast("📝 Logs successfully cleared!", false);
+                    const pre = document.getElementById('system-logs-content');
+                    if (pre) pre.textContent = "Logs cleared.";
+                }} else {{
+                    showToast("Error clearing logs.", true);
+                }}
+            }} catch (e) {{
+                showToast("Connection failed.", true);
+            }}
+        }}
+
+        async function toggleEnableLogging(cb) {{
+            const enabled = cb.checked;
+            const pre = document.getElementById('system-logs-content');
+            if (pre) {{
+                pre.style.display = enabled ? 'block' : 'none';
+            }}
+            const placeholder = document.getElementById('system-logs-disabled-message');
+            if (placeholder) {{
+                placeholder.style.display = enabled ? 'none' : 'block';
+            }}
+            
+            try {{
+                const r = await fetch(getApiUrl('/config'), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ logging_enabled: enabled }})
+                }});
+                if (r.ok) {{
+                    showToast(enabled ? "📝 System logging enabled!" : "⏸ System logging disabled!", false);
+                    updateDashboardSeamlessly();
+                }} else {{
+                    showToast("Error updating logging state.", true);
+                }}
+            }} catch (e) {{
+                showToast("Connection failed.", true);
+            }}
         }}
 
         loadConfig();
