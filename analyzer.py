@@ -11,6 +11,18 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 ALERTS_LOG_PATH = os.path.join(BASE_DIR, "alerts.log")
 DASHBOARD_PATH = os.path.join(BASE_DIR, "alerts_dashboard.html")
 
+TRACKER_LOG_PATH = os.path.join(BASE_DIR, "tracker.log")
+
+def get_latest_tracker_logs(limit=200):
+    if not os.path.exists(TRACKER_LOG_PATH):
+        return "No system logs found yet. Ensure the daemon has started."
+    try:
+        with open(TRACKER_LOG_PATH, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+            return "".join(lines[-limit:])
+    except Exception as e:
+        return f"Error reading logs: {e}"
+
 def load_config():
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -1083,6 +1095,7 @@ def generate_dashboard(symbols):
     recent_alerts = get_latest_alerts_from_log(50)
     recent_alerts_large = get_latest_alerts_from_log(500)
     alerts_json_str = json.dumps(recent_alerts_large).replace("{", "{{").replace("}", "}}")
+    tracker_logs_text = get_latest_tracker_logs(300).replace("{", "{{").replace("}", "}}")
     
     # Get DB size on disk
     size_mb = db_manager.get_db_size_mb()
@@ -1670,6 +1683,7 @@ def generate_dashboard(symbols):
         <button id="btn-tab-focus" class="tab-btn" onclick="switchTab('focus')">⭐ Focus Panel</button>
         <button id="btn-tab-retro" class="tab-btn" onclick="switchTab('retro')">🔍 EOD Retrospection</button>
         <button id="btn-tab-ai" class="tab-btn" onclick="switchTab('ai')">🤖 AI Optimizer</button>
+        <button id="btn-tab-logs" class="tab-btn" onclick="switchTab('logs')">📝 System Logs</button>
         <button id="btn-tab-config" class="tab-btn" onclick="switchTab('config')">⚙️ Configuration</button>
     </div>
     
@@ -2027,6 +2041,22 @@ def generate_dashboard(symbols):
             </div>
         </div>
     </div>
+
+    <!-- Tab: System Logs -->
+    <div id="tab-logs" class="tab-content">
+        <div class="container" style="max-width: 1000px; margin: 0 auto;">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="margin-bottom: 0;">📝 System Log Viewer (Latest 300 lines)</h2>
+                    <button onclick="updateDashboardSeamlessly()" class="btn-reset-filters">🔄 Refresh Logs</button>
+                </div>
+                <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
+                    Live logs from the daemon process tracking API requests, calculations, database writes, and memory metrics.
+                </div>
+                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">{tracker_logs_text}</pre>
+            </div>
+        </div>
+    </div>
     
     <div id="toast" class="toast">Settings saved successfully!</div>
     
@@ -2055,6 +2085,10 @@ def generate_dashboard(symbols):
                 document.getElementById('btn-tab-ai').classList.add('active');
                 document.getElementById('tab-ai').classList.add('active-content');
                 localStorage.setItem('activeTab', 'ai');
+            }} else if (tabName === 'logs') {{
+                document.getElementById('btn-tab-logs').classList.add('active');
+                document.getElementById('tab-logs').classList.add('active-content');
+                localStorage.setItem('activeTab', 'logs');
             }} else {{
                 document.getElementById('btn-tab-config').classList.add('active');
                 document.getElementById('tab-config').classList.add('active-content');
@@ -2107,7 +2141,8 @@ def generate_dashboard(symbols):
                     '#tab-ai',
                     '#db-size-info',
                     '#last-updated-meta',
-                    '#raw-alerts-json'
+                    '#raw-alerts-json',
+                    '#system-logs-content'
                 ];
                 
                 selectors.forEach(selector => {{
