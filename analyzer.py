@@ -1094,8 +1094,8 @@ def generate_dashboard(symbols):
     # Load recent alerts
     recent_alerts = get_latest_alerts_from_log(50)
     recent_alerts_large = get_latest_alerts_from_log(500)
-    alerts_json_str = json.dumps(recent_alerts_large).replace("{", "{{").replace("}", "}}")
-    tracker_logs_text = get_latest_tracker_logs(300).replace("{", "{{").replace("}", "}}")
+    alerts_json_str = json.dumps(recent_alerts_large)
+    tracker_logs_text = get_latest_tracker_logs(300)
     
     # Get DB size on disk
     size_mb = db_manager.get_db_size_mb()
