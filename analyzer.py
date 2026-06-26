@@ -439,7 +439,7 @@ def analyze_all_symbols(symbols):
     for symbol in symbols:
         # Fetch the last 2 records
         cursor.execute("""
-            SELECT timestamp, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day
+            SELECT timestamp, price, day_change, macd_line, signal_line, histogram, rsi, volume, average_volume, total_ce_oi, total_pe_oi, pcr, futures_oi, futures_oi_change_pct, rsi_30, rsi_60, macd_day, macd_signal_day, macd_hist_day, rsi_day, macd_45, macd_signal_45, macd_hist_45
             FROM macd_records
             WHERE symbol = ?
             ORDER BY timestamp DESC
@@ -453,8 +453,8 @@ def analyze_all_symbols(symbols):
         latest = rows[0]
         previous = rows[1]
         
-        lat_time, lat_price, lat_day_change, lat_macd, lat_signal, lat_hist, lat_rsi, lat_vol, lat_avg_vol, lat_ce_oi, lat_pe_oi, lat_pcr, lat_fut_oi, lat_fut_oi_chg, lat_rsi_30, lat_rsi_60, lat_macd_day, lat_macd_signal_day, lat_macd_hist_day, lat_rsi_day = latest
-        prev_time, prev_price, prev_day_change, prev_macd, prev_signal, prev_hist, prev_rsi, prev_vol, prev_avg_vol, prev_ce_oi, prev_pe_oi, prev_pcr, prev_fut_oi, prev_fut_oi_chg, prev_rsi_30, prev_rsi_60, prev_macd_day, prev_macd_signal_day, prev_macd_hist_day, prev_rsi_day = previous
+        lat_time, lat_price, lat_day_change, lat_macd, lat_signal, lat_hist, lat_rsi, lat_vol, lat_avg_vol, lat_ce_oi, lat_pe_oi, lat_pcr, lat_fut_oi, lat_fut_oi_chg, lat_rsi_30, lat_rsi_60, lat_macd_day, lat_macd_signal_day, lat_macd_hist_day, lat_rsi_day, lat_macd_45, lat_macd_signal_45, lat_macd_hist_45 = latest
+        prev_time, prev_price, prev_day_change, prev_macd, prev_signal, prev_hist, prev_rsi, prev_vol, prev_avg_vol, prev_ce_oi, prev_pe_oi, prev_pcr, prev_fut_oi, prev_fut_oi_chg, prev_rsi_30, prev_rsi_60, prev_macd_day, prev_macd_signal_day, prev_macd_hist_day, prev_rsi_day, prev_macd_45, prev_macd_signal_45, prev_macd_hist_45 = previous
         
         if None in (lat_macd, lat_signal, lat_hist, prev_macd, prev_signal, prev_hist):
             continue
@@ -530,7 +530,10 @@ def analyze_all_symbols(symbols):
                 "macd_day": lat_macd_day,
                 "macd_signal_day": lat_macd_signal_day,
                 "macd_hist_day": lat_macd_hist_day,
-                "rsi_day": lat_rsi_day
+                "rsi_day": lat_rsi_day,
+                "macd_45": lat_macd_45,
+                "macd_signal_45": lat_macd_signal_45,
+                "macd_hist_45": lat_macd_hist_45
             }
             alert = apply_adaptive_filter(alert, config)
             alerts_triggered.append(alert)
@@ -569,7 +572,10 @@ def analyze_all_symbols(symbols):
                     "macd_day": lat_macd_day,
                     "macd_signal_day": lat_macd_signal_day,
                     "macd_hist_day": lat_macd_hist_day,
-                    "rsi_day": lat_rsi_day
+                    "rsi_day": lat_rsi_day,
+                    "macd_45": lat_macd_45,
+                    "macd_signal_45": lat_macd_signal_45,
+                    "macd_hist_45": lat_macd_hist_45
                 }
                 dry_alert = apply_adaptive_filter(dry_alert, config)
                 alerts_triggered.append(dry_alert)
@@ -609,7 +615,10 @@ def analyze_all_symbols(symbols):
                 a.get("macd_day"),
                 a.get("macd_signal_day"),
                 a.get("macd_hist_day"),
-                a.get("rsi_day")
+                a.get("rsi_day"),
+                a.get("macd_45"),
+                a.get("macd_signal_45"),
+                a.get("macd_hist_45")
             ))
         db_manager.insert_alerts(db_alerts)
 
