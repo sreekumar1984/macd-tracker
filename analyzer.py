@@ -165,6 +165,128 @@ def check_condition(condition, alert):
         print(f"Error evaluating condition '{condition}': {e}")
         return True
 
+def optimize_dataset(dataset, alert_type):
+    # Include Neutral in the evaluation
+    total_eval = [r for r in dataset if r['status'] in ('SUCCESS', 'FAILED', 'NEUTRAL')]
+    total_count = len(total_eval)
+    if total_count < 3: # Min 3 samples to optimize
+        return None
+        
+    successes = len([r for r in total_eval if r['status'] == 'SUCCESS'])
+    
+    baseline_win_rate = (successes / total_count * 100) if total_count > 0 else 0.0
+    
+    candidates = []
+    is_bullish = alert_type in ("BULLISH_CROSSOVER", "MOMENTUM_START", "MACD_INCREASE", "HISTOGRAM_ACCELERATING")
+    is_bearish = alert_type in ("BEARISH_CROSSOVER")
+    
+    # 1. RSI Candidates
+    if is_bullish:
+        for rsi_val in [55, 60, 65, 70]:
+            subset = [r for r in total_eval if r['rsi'] is not None and r['rsi'] < rsi_val]
+            sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
+            sub_total = len(subset)
+            if sub_total >= 2 and sub_total >= total_count * 0.15:
+                wr = (sub_success / sub_total * 100)
+                candidates.append({
+                    "condition": f"RSI < {rsi_val}",
+                    "win_rate": wr,
+                    "filtered": total_count - sub_total,
+                    "success_kept": sub_success,
+                    "desc": f"Prevents entering at potential overbought exhaustion levels above {rsi_val}."
+                })
+    elif is_bearish:
+        for rsi_val in [30, 35, 40, 45]:
+            subset = [r for r in total_eval if r['rsi'] is not None and r['rsi'] > rsi_val]
+            sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
+            sub_total = len(subset)
+            if sub_total >= 2 and sub_total >= total_count * 0.15:
+                wr = (sub_success / sub_total * 100)
+                candidates.append({
+                    "condition": f"RSI > {rsi_val}",
+                    "win_rate": wr,
+                    "filtered": total_count - sub_total,
+                    "success_kept": sub_success,
+                    "desc": f"Prevents shorting near potential oversold support levels below {rsi_val}."
+                })
+                
+    # 2. Volume Ratio Candidates
+    for vol_ratio in [0.8, 1.0, 1.2, 1.5]:
+        subset = []
+        for r in total_eval:
+            vol = r['volume']
+            avg_vol = r['average_volume']
+            if vol is not None and avg_vol and avg_vol > 0:
+                ratio = vol / avg_vol
+                if ratio >= vol_ratio:
+                    subset.append(r)
+        sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
+        sub_total = len(subset)
+        if sub_total >= 2 and sub_total >= total_count * 0.15:
+            wr = (sub_success / sub_total * 100)
+            candidates.append({
+                "condition": f"Volume Ratio >= {vol_ratio:.1f}",
+                "win_rate": wr,
+                "filtered": total_count - sub_total,
+                "success_kept": sub_success,
+                "desc": f"Filters out weak volume moves by requiring traded volume to be >= {vol_ratio*100:.0f}% of average."
+            })
+            
+    # 3. PCR Candidates
+    if is_bullish:
+        for pcr_val in [0.8, 0.9, 1.0]:
+            subset = [r for r in total_eval if r['pcr'] is not None and r['pcr'] >= pcr_val]
+            sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
+            sub_total = len(subset)
+            if sub_total >= 2 and sub_total >= total_count * 0.15:
+                wr = (sub_success / sub_total * 100)
+                candidates.append({
+                    "condition": f"Option PCR >= {pcr_val:.1f}",
+                    "win_rate": wr,
+                    "filtered": total_count - sub_total,
+                    "success_kept": sub_success,
+                    "desc": "Ensures bullish options positioning prior to entry."
+                })
+    elif is_bearish:
+        for pcr_val in [1.2, 1.1, 1.0]:
+            subset = [r for r in total_eval if r['pcr'] is not None and r['pcr'] <= pcr_val]
+            sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
+            sub_total = len(subset)
+            if sub_total >= 2 and sub_total >= total_count * 0.15:
+                wr = (sub_success / sub_total * 100)
+                candidates.append({
+                    "condition": f"Option PCR <= {pcr_val:.1f}",
+                    "win_rate": wr,
+                    "filtered": total_count - sub_total,
+                    "success_kept": sub_success,
+                    "desc": "Ensures bearish options positioning prior to entry."
+                })
+                
+    # 4. Futures OI Candidates
+    subset = [r for r in total_eval if r['futures_oi_change_pct'] is not None and r['futures_oi_change_pct'] > 0.0]
+    sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
+    sub_total = len(subset)
+    if sub_total >= 2 and sub_total >= total_count * 0.15:
+        wr = (sub_success / sub_total * 100)
+        candidates.append({
+            "condition": "Futures OI Change > 0%",
+            "win_rate": wr,
+            "filtered": total_count - sub_total,
+            "success_kept": sub_success,
+            "desc": "Verifies that open interest is actively rising (buildup) to support the move."
+        })
+        
+    # Filter candidates that improve win rate
+    candidates = [c for c in candidates if c['win_rate'] > baseline_win_rate + 0.5]
+    candidates.sort(key=lambda c: (c['win_rate'], -c['filtered']), reverse=True)
+    
+    if candidates:
+        return {
+            "best": candidates[0],
+            "baseline_win_rate": baseline_win_rate
+        }
+    return None
+
 def run_optimization_analysis():
     db_path = "/Users/sree/macd_momentum_tracker/db/macd_history.db"
     if not os.path.exists(db_path):
@@ -177,7 +299,7 @@ def run_optimization_analysis():
     try:
         cursor.execute("""
             SELECT 
-                r.alert_type, r.status, r.pct_change,
+                r.alert_type, r.status, r.pct_change, r.symbol,
                 a.rsi, a.volume, a.average_volume, a.pcr, a.futures_oi_change_pct,
                 a.macd_line, a.signal_line, a.histogram, a.macd_45, a.macd_signal_45, a.macd_hist_45,
                 a.macd_day, a.macd_signal_day, a.macd_hist_day, a.rsi_day
@@ -218,38 +340,40 @@ def run_optimization_analysis():
             "metrics": "Improves breakout conviction"
         },
         "MACD_INCREASE": {
-            "rule_name": "Volume Ratio Floor",
-            "condition": "Volume Ratio >= 1.2 and RSI < 65",
-            "desc": "Insists on volume expansion to confirm momentum acceleration.",
-            "impact": "+9.8% Win Rate (Expert Estimate)",
+            "rule_name": "MACD Acceleration Filter",
+            "condition": "MACD Hist Change > 0.05",
+            "desc": "Confirms that the momentum is accelerating before logging an increase trigger.",
+            "impact": "+10.5% Win Rate (Expert Estimate)",
             "is_dynamic": False,
-            "metrics": "Filters low-volatility rises"
-        },
-        "HISTOGRAM_ACCELERATING": {
-            "rule_name": "Daily Trend Confirmation",
-            "condition": "macd_hist_day > 0 and RSI < 65",
-            "desc": "Confirms acceleration aligns with the daily MACD trend direction.",
-            "impact": "+11.2% Win Rate (Expert Estimate)",
-            "is_dynamic": False,
-            "metrics": "Avoids counter-trend whipsaws"
+            "metrics": "Filters standard choppy markets"
         },
         "MOMENTUM_START": {
-            "rule_name": "Volume Expansion Floor",
-            "condition": "Volume Ratio >= 1.5",
-            "desc": "Demands huge volume to confirm the start of a strong momentum trend.",
+            "rule_name": "Trend Momentum Confirmation",
+            "condition": "Volume Ratio >= 1.1 and RSI > 45",
+            "desc": "Ensures momentum is backed by volume and does not trigger in a flat range.",
+            "impact": "+13.0% Win Rate (Expert Estimate)",
+            "is_dynamic": False,
+            "metrics": "Avoids weak breakout traps"
+        },
+        "HISTOGRAM_ACCELERATING": {
+            "rule_name": "Histogram Thrust Confirmation",
+            "condition": "Volume Ratio >= 1.2 and Histogram > 0.1",
+            "desc": "Confirms histogram momentum is supported by real traded volume.",
             "impact": "+15.0% Win Rate (Expert Estimate)",
             "is_dynamic": False,
             "metrics": "Filters out false breakouts"
         }
     }
     
-    if not rows or len(rows) < 5:
+    if not rows or len(rows) < 3:
         return {
             "is_dynamic": False,
             "sample_size": len(rows) if rows else 0,
-            "rules": expert_rules
+            "rules": expert_rules,
+            "symbols": {}
         }
         
+    # Group by alert type for global rules
     by_type = {}
     for row in rows:
         alert_type = row['alert_type']
@@ -257,153 +381,59 @@ def run_optimization_analysis():
             by_type[alert_type] = []
         by_type[alert_type].append(row)
         
-    dynamic_rules = {}
-    
-    for alert_type, dataset in by_type.items():
-        total_eval = [r for r in dataset if r['status'] in ('SUCCESS', 'FAILED')]
-        total_count = len(total_eval)
-        successes = len([r for r in total_eval if r['status'] == 'SUCCESS'])
-        failures = len([r for r in total_eval if r['status'] == 'FAILED'])
-        
-        baseline_win_rate = (successes / total_count * 100) if total_count > 0 else 0.0
-        
-        candidates = []
-        
-        is_bullish = alert_type in ("BULLISH_CROSSOVER", "MOMENTUM_START", "MACD_INCREASE", "HISTOGRAM_ACCELERATING")
-        is_bearish = alert_type in ("BEARISH_CROSSOVER")
-        
-        if is_bullish:
-            for rsi_val in [55, 60, 65, 70]:
-                subset = [r for r in total_eval if r['rsi'] is not None and r['rsi'] < rsi_val]
-                sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
-                sub_fail = len([r for r in subset if r['status'] == 'FAILED'])
-                sub_total = len(subset)
-                if sub_total >= 2 and sub_total >= total_count * 0.15:
-                    wr = (sub_success / sub_total * 100)
-                    candidates.append({
-                        "condition": f"RSI < {rsi_val}",
-                        "win_rate": wr,
-                        "filtered": total_count - sub_total,
-                        "success_kept": sub_success,
-                        "fail_kept": sub_fail,
-                        "desc": f"Prevents entering at potential overbought exhaustion levels above {rsi_val}."
-                    })
-        elif is_bearish:
-            for rsi_val in [30, 35, 40, 45]:
-                subset = [r for r in total_eval if r['rsi'] is not None and r['rsi'] > rsi_val]
-                sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
-                sub_fail = len([r for r in subset if r['status'] == 'FAILED'])
-                sub_total = len(subset)
-                if sub_total >= 2 and sub_total >= total_count * 0.15:
-                    wr = (sub_success / sub_total * 100)
-                    candidates.append({
-                        "condition": f"RSI > {rsi_val}",
-                        "win_rate": wr,
-                        "filtered": total_count - sub_total,
-                        "success_kept": sub_success,
-                        "fail_kept": sub_fail,
-                        "desc": f"Prevents shorting near potential oversold support levels below {rsi_val}."
-                    })
-                    
-        for vol_ratio in [0.8, 1.0, 1.2, 1.5]:
-            subset = []
-            for r in total_eval:
-                if r['volume'] is not None and r['average_volume'] is not None and r['average_volume'] > 0:
-                    if r['volume'] / r['average_volume'] >= vol_ratio:
-                        subset.append(r)
-            sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
-            sub_fail = len([r for r in subset if r['status'] == 'FAILED'])
-            sub_total = len(subset)
-            if sub_total >= 2 and sub_total >= total_count * 0.15:
-                wr = (sub_success / sub_total * 100)
-                candidates.append({
-                    "condition": f"Volume Ratio >= {vol_ratio:.1f}",
-                    "win_rate": wr,
-                    "filtered": total_count - sub_total,
-                    "success_kept": sub_success,
-                    "fail_kept": sub_fail,
-                    "desc": f"Filters out weak volume moves by requiring traded volume to be >= {vol_ratio*100:.0f}% of average."
-                })
-                
-        if is_bullish:
-            for pcr_val in [0.8, 0.9, 1.0]:
-                subset = [r for r in total_eval if r['pcr'] is not None and r['pcr'] >= pcr_val]
-                sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
-                sub_fail = len([r for r in subset if r['status'] == 'FAILED'])
-                sub_total = len(subset)
-                if sub_total >= 2 and sub_total >= total_count * 0.15:
-                    wr = (sub_success / sub_total * 100)
-                    candidates.append({
-                        "condition": f"Option PCR >= {pcr_val:.1f}",
-                        "win_rate": wr,
-                        "filtered": total_count - sub_total,
-                        "success_kept": sub_success,
-                        "fail_kept": sub_fail,
-                        "desc": "Ensures bullish options positioning prior to entry."
-                    })
-        elif is_bearish:
-            for pcr_val in [1.2, 1.1, 1.0]:
-                subset = [r for r in total_eval if r['pcr'] is not None and r['pcr'] <= pcr_val]
-                sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
-                sub_fail = len([r for r in subset if r['status'] == 'FAILED'])
-                sub_total = len(subset)
-                if sub_total >= 2 and sub_total >= total_count * 0.15:
-                    wr = (sub_success / sub_total * 100)
-                    candidates.append({
-                        "condition": f"Option PCR <= {pcr_val:.1f}",
-                        "win_rate": wr,
-                        "filtered": total_count - sub_total,
-                        "success_kept": sub_success,
-                        "fail_kept": sub_fail,
-                        "desc": "Ensures bearish options positioning prior to entry."
-                    })
-                    
-        subset = [r for r in total_eval if r['futures_oi_change_pct'] is not None and r['futures_oi_change_pct'] > 0.0]
-        sub_success = len([r for r in subset if r['status'] == 'SUCCESS'])
-        sub_fail = len([r for r in subset if r['status'] == 'FAILED'])
-        sub_total = len(subset)
-        if sub_total >= 2 and sub_total >= total_count * 0.15:
-            wr = (sub_success / sub_total * 100)
-            candidates.append({
-                "condition": "Futures OI Change > 0%",
-                "win_rate": wr,
-                "filtered": total_count - sub_total,
-                "success_kept": sub_success,
-                "fail_kept": sub_fail,
-                "desc": "Verifies that open interest is actively rising (buildup) to support the move."
-            })
-            
-        candidates = [c for c in candidates if c['win_rate'] > baseline_win_rate + 1.0]
-        candidates.sort(key=lambda c: (c['win_rate'], -c['filtered']), reverse=True)
-        
-        if candidates:
-            best = candidates[0]
-            dynamic_rules[alert_type] = {
+    global_rules = {}
+    for alert_type in expert_rules.keys():
+        dataset = by_type.get(alert_type, [])
+        res = optimize_dataset(dataset, alert_type)
+        if res:
+            best = res["best"]
+            base_wr = res["baseline_win_rate"]
+            global_rules[alert_type] = {
                 "rule_name": f"Optimized {best['condition']}",
                 "condition": best['condition'],
                 "desc": best['desc'],
-                "impact": f"{baseline_win_rate:.1f}% → {best['win_rate']:.1f}% Win Rate (+{best['win_rate'] - baseline_win_rate:.1f}%)",
+                "impact": f"{base_wr:.1f}% → {best['win_rate']:.1f}% Win Rate (+{best['win_rate'] - base_wr:.1f}%)",
                 "is_dynamic": True,
-                "metrics": f"Prevents {best['filtered'] - (failures - best['fail_kept'])} failures (Retained {best['success_kept']}/{successes} successes)"
+                "metrics": f"Prevents {best['filtered']} low-conviction signals"
             }
         else:
-            dynamic_rules[alert_type] = expert_rules.get(alert_type, {
-                "rule_name": "Standard Threshold",
-                "condition": "None",
-                "desc": "Baseline monitoring parameters.",
-                "impact": "No change",
-                "is_dynamic": False,
-                "metrics": "No filtering applied"
-            })
+            global_rules[alert_type] = expert_rules[alert_type]
             
-    for k, v in expert_rules.items():
-        if k not in dynamic_rules:
-            dynamic_rules[k] = v
-            
+    # Group by symbol and alert_type for symbol-specific rules
+    by_symbol_and_type = {}
+    for row in rows:
+        symbol = row['symbol']
+        alert_type = row['alert_type']
+        if symbol not in by_symbol_and_type:
+            by_symbol_and_type[symbol] = {}
+        if alert_type not in by_symbol_and_type[symbol]:
+            by_symbol_and_type[symbol][alert_type] = []
+        by_symbol_and_type[symbol][alert_type].append(row)
+        
+    symbol_rules = {}
+    for symbol, type_datasets in by_symbol_and_type.items():
+        for alert_type, dataset in type_datasets.items():
+            res = optimize_dataset(dataset, alert_type)
+            if res:
+                best = res["best"]
+                base_wr = res["baseline_win_rate"]
+                if symbol not in symbol_rules:
+                    symbol_rules[symbol] = {}
+                symbol_rules[symbol][alert_type] = {
+                    "rule_name": f"Custom {best['condition']}",
+                    "condition": best['condition'],
+                    "desc": best['desc'],
+                    "impact": f"{base_wr:.1f}% → {best['win_rate']:.1f}% Win Rate (+{best['win_rate'] - base_wr:.1f}%)",
+                    "is_dynamic": True,
+                    "metrics": f"Prevents {best['filtered']} low-conviction signals",
+                    "sample_size": len(dataset)
+                }
+                
     return {
         "is_dynamic": True,
         "sample_size": len(rows),
-        "rules": dynamic_rules
+        "rules": global_rules,
+        "symbols": symbol_rules
     }
 
 def apply_adaptive_filter(alert, config):
@@ -428,14 +458,25 @@ def apply_adaptive_filter(alert, config):
             except Exception as e:
                 print(f"Error saving optimized rules: {e}")
                 
-    rules = rules_data.get("rules", {})
+    symbol = alert.get("symbol")
     alert_type = alert.get("alert_type")
-    rule = rules.get(alert_type)
+    
+    # Check symbol-specific custom rules first
+    symbol_rules = rules_data.get("symbols", {}).get(symbol, {}) if rules_data else {}
+    rule = symbol_rules.get(alert_type)
+    rule_source = "Symbol Custom"
+    
+    if not rule and rules_data:
+        # Fall back to global rule
+        rules = rules_data.get("rules", {})
+        rule = rules.get(alert_type)
+        rule_source = "Global AI"
+        
     if rule:
         passed = check_condition(rule["condition"], alert)
         if not passed:
             alert["severity"] = "LOW_CONVICTION"
-            alert["message"] = alert["message"] + " [Low Conviction - AI Suppressed]"
+            alert["message"] = alert["message"] + f" [Low Conviction - AI Suppressed ({rule_source})]"
     return alert
 
 def analyze_all_symbols(symbols):
@@ -686,7 +727,7 @@ def run_eod_retrospective(date_str=None, force=False):
                 
         # Get all alerts for eval_date that do not have a retrospective yet
         cursor.execute("""
-            SELECT a.id, a.timestamp, a.symbol, a.price, a.alert_type, a.rsi, a.volume, a.average_volume
+            SELECT a.id, a.timestamp, a.symbol, a.price, a.alert_type, a.rsi, a.volume, a.average_volume, a.pcr, a.histogram
             FROM alerts_triggered a
             LEFT JOIN alert_retrospectives r ON a.timestamp = r.alert_timestamp AND a.symbol = r.symbol
             WHERE r.id IS NULL AND a.timestamp LIKE ?
@@ -711,10 +752,10 @@ def run_eod_retrospective(date_str=None, force=False):
         
         retros_to_insert = []
         
-        for alert_id, alert_time, symbol, signal_price, alert_type, rsi, vol, avg_vol in alerts:
-            # Find EOD closing price for the symbol
+        for alert_id, alert_time, symbol, signal_price, alert_type, rsi, vol, avg_vol, pcr, sig_hist in alerts:
+            # Find EOD closing price and indicators for the symbol
             cursor.execute("""
-                SELECT price, volume, average_volume, histogram FROM macd_records
+                SELECT price, volume, average_volume, histogram, rsi, pcr FROM macd_records
                 WHERE symbol = ? AND timestamp LIKE ?
                 ORDER BY timestamp DESC
                 LIMIT 1
@@ -723,10 +764,14 @@ def run_eod_retrospective(date_str=None, force=False):
             if not eod_row:
                 continue
                 
-            eod_price, eod_vol, eod_avg_vol, eod_hist = eod_row
+            eod_price, eod_vol, eod_avg_vol, eod_hist, eod_rsi, eod_pcr = eod_row
             
             # Calculate percentage change
             pct_change = ((eod_price - signal_price) / signal_price) * 100
+            
+            # Calculate volume ratios
+            sig_vol_ratio = (vol / avg_vol * 100) if (vol is not None and avg_vol and avg_vol > 0) else None
+            eod_vol_ratio = (eod_vol / eod_avg_vol * 100) if (eod_vol is not None and eod_avg_vol and eod_avg_vol > 0) else None
             
             # Calculate Nifty index change after signal
             nifty_change = 0.0
@@ -808,7 +853,16 @@ def run_eod_retrospective(date_str=None, force=False):
                 pct_change,
                 status,
                 reason,
-                eval_time
+                eval_time,
+                rsi,              # signal_rsi
+                eod_rsi,          # eod_rsi
+                sig_vol_ratio,    # signal_vol_ratio
+                eod_vol_ratio,    # eod_vol_ratio
+                pcr,              # signal_pcr
+                eod_pcr,          # eod_pcr
+                nifty_change,     # nifty_change
+                sig_hist,         # signal_hist
+                eod_hist          # eod_hist
             ))
             
             log_msg = f"🔍 [Retrospective] Evaluated {symbol} ({alert_type}) | Signal Price: ₹{signal_price:.2f} | EOD Price: ₹{eod_price:.2f} ({pct_change:+.2f}%) | Status: {status}"
@@ -860,7 +914,8 @@ def generate_dashboard(symbols):
     retros_rows = []
     try:
         cursor.execute("""
-            SELECT alert_timestamp, symbol, alert_type, signal_price, eod_price, pct_change, status, failure_reason, eval_timestamp
+            SELECT alert_timestamp, symbol, alert_type, signal_price, eod_price, pct_change, status, failure_reason, eval_timestamp,
+                   signal_rsi, eod_rsi, signal_vol_ratio, eod_vol_ratio, signal_pcr, eod_pcr, nifty_change, signal_hist, eod_hist, id
             FROM alert_retrospectives
             ORDER BY alert_timestamp DESC
             LIMIT 300
@@ -880,6 +935,47 @@ def generate_dashboard(symbols):
                 json.dump(opt_data, f, indent=2)
         except Exception as opt_err:
             print(f"  ⚠️ Error saving AI Optimizer rules JSON: {opt_err}")
+    symbol_rules_html = ""
+    symbols_dict = opt_data.get("symbols", {})
+    if not symbols_dict:
+        symbol_rules_html = """
+        <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border); border-radius: 8px;">
+            No custom symbol-specific patterns discovered yet. Insufficient history per symbol (needs at least 3 trials per stock).
+        </div>
+        """
+    else:
+        symbol_rules_html = """
+        <div class="table-wrap" style="max-height: 250px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Alert Type</th>
+                        <th>Custom Rule Condition</th>
+                        <th>Success Rate Impact</th>
+                        <th>Trials</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        for symbol, rules in sorted(symbols_dict.items()):
+            for alert_type, rule in sorted(rules.items()):
+                type_disp = alert_type.replace("_", " ")
+                symbol_rules_html += f"""
+                <tr>
+                    <td style="font-weight: bold; color: #fff;">{symbol}</td>
+                    <td style="font-size: 12px; font-weight: 600;">{type_disp}</td>
+                    <td><code style="color: #60a5fa; font-family: monospace; font-size: 12px;">{rule.get("condition")}</code></td>
+                    <td><span style="color: #10b981; font-weight: bold; font-size: 11px;">{rule.get("impact")}</span></td>
+                    <td style="color: var(--text-muted); font-size: 11px;">{rule.get("sample_size")}</td>
+                </tr>
+                """
+        symbol_rules_html += """
+                </tbody>
+            </table>
+        </div>
+        """
+
     rules_html = ""
     rules_dict = opt_data.get("rules", {})
     for alert_type, rule in rules_dict.items():
@@ -973,7 +1069,7 @@ def generate_dashboard(symbols):
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
         <div>
             <h2 style="font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px;">⚡ Active Filter Rules & Recommendations</h2>
-            {{rules_html}}
+            {rules_html}
         </div>
         
         <div class="card" style="height: fit-content;">
@@ -997,12 +1093,22 @@ def generate_dashboard(symbols):
             </div>
         </div>
     </div>
+    
+    <div class="card" style="margin-top: 24px;">
+        <h3 style="font-family: 'Outfit', sans-serif; font-size: 18px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+            🎯 Symbol-Specific Performance Profiles
+        </h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+            Custom parameter thresholds learned by the AI for individual stocks based on their unique volatility and liquidity behaviors.
+        </p>
+        {symbol_rules_html}
+    </div>
     """
 
     # Process retrospectives by date
     retros_by_date = {}
     for r in retros_rows:
-        alert_time, symbol, alert_type, signal_price, eod_price, pct_change, status, reason, eval_time = r
+        alert_time, symbol, alert_type, signal_price, eod_price, pct_change, status, reason, eval_time = r[:9]
         date_part = alert_time.split()[0]
         if date_part not in retros_by_date:
             retros_by_date[date_part] = {
@@ -1077,22 +1183,100 @@ def generate_dashboard(symbols):
                 
             item_rows = ""
             for item in data["items"]:
-                alert_time, symbol, alert_type, sig_price, eod_price, pct_change, status, reason, eval_time = item
+                alert_time, symbol, alert_type, sig_price, eod_price, pct_change, status, reason, eval_time, \
+                sig_rsi, eod_rsi, sig_vol_ratio, eod_vol_ratio, sig_pcr, eod_pcr, nifty_change, sig_hist, eod_hist, item_id = item
                 
                 status_badge_color = "#10b981" if status == "SUCCESS" else "#ef4444" if status == "FAILED" else "#9ca3af"
                 change_style = "color: #10b981;" if pct_change > 0 else "color: #ef4444;" if pct_change < 0 else "color: var(--text-muted);"
                 alert_type_display = alert_type.replace("_", " ")
                 
+                # Format EOD values for display
+                disp_sig_rsi = f"{sig_rsi:.1f}" if sig_rsi is not None else "—"
+                disp_eod_rsi = f"{eod_rsi:.1f}" if eod_rsi is not None else "—"
+                disp_sig_vol = f"{sig_vol_ratio:.1f}%" if sig_vol_ratio is not None else "—"
+                disp_eod_vol = f"{eod_vol_ratio:.1f}%" if eod_vol_ratio is not None else "—"
+                disp_sig_pcr = f"{sig_pcr:.2f}" if sig_pcr is not None else "—"
+                disp_eod_pcr = f"{eod_pcr:.2f}" if eod_pcr is not None else "—"
+                disp_sig_hist = f"{sig_hist:.3f}" if sig_hist is not None else "—"
+                disp_eod_hist = f"{eod_hist:.3f}" if eod_hist is not None else "—"
+                disp_nifty_change = f"{nifty_change:+.2f}%" if nifty_change is not None else "—"
+                
                 item_rows += f"""
-                <tr>
+                <tr onclick="toggleItemDetails('{item_id}')" style="cursor: pointer;" class="retro-row">
                     <td>{alert_time.split()[1]}</td>
                     <td style="font-weight: bold; color: #fff;">{symbol}</td>
-                    <td style="font-weight: 600;">{alert_type_display}</td>
+                    <td style="font-size: 12px; font-weight: 600;">{alert_type_display}</td>
                     <td>₹{sig_price:.2f}</td>
                     <td>₹{eod_price:.2f}</td>
                     <td style="{change_style} font-weight: bold;">{pct_change:+.2f}%</td>
                     <td><span style="background: {status_badge_color}20; color: {status_badge_color}; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">{status}</span></td>
-                    <td style="color: #cbd5e1; font-size: 12px;">{reason or 'N/A'}</td>
+                    <td style="color: #cbd5e1; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                        <span>{reason or 'N/A'}</span>
+                        <span style="color: #60a5fa; font-size: 10px; text-decoration: underline;">Inspect ➔</span>
+                    </td>
+                </tr>
+                <tr id="details-{item_id}" style="display: none; background: rgba(30, 41, 59, 0.25);">
+                    <td colspan="8" style="padding: 16px; border: 1px dashed rgba(255,255,255,0.05); border-radius: 8px;">
+                        <div style="display: grid; grid-template-columns: 2fr 3fr; gap: 20px;">
+                            <div class="card" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border); padding: 14px; margin: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <h4 style="margin: 0 0 8px 0; color: #fff; font-size: 13px; font-family: 'Outfit', sans-serif;">🔍 Diagnostic Assessment</h4>
+                                    <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.5;">
+                                        Generated at <strong>{alert_time.split()[1]}</strong>. Graded against EOD close to determine signal strength.
+                                    </p>
+                                </div>
+                                <div style="background: {status_badge_color}10; border-left: 4px solid {status_badge_color}; padding: 10px; border-radius: 4px;">
+                                    <strong style="color: {status_badge_color}; font-size: 12px; display: block; margin-bottom: 2px;">Result: {status}</strong>
+                                    <span style="color: #cbd5e1; font-size: 11px;">{reason or 'Signal behaved within expected parameters.'}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border); padding: 14px; margin: 0;">
+                                <h4 style="margin: 0 0 10px 0; color: #fff; font-size: 13px; font-family: 'Outfit', sans-serif;">📊 Signal vs. EOD Metrics</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 4px; font-weight: bold; color: var(--text-muted);">
+                                    <div style="text-align: left;">Metric</div>
+                                    <div>Signal Time</div>
+                                    <div>EOD Close</div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; padding: 3px 0; align-items: center;">
+                                    <div style="text-align: left; font-weight: bold; color: #fff;">Price</div>
+                                    <div style="color: #cbd5e1;">₹{sig_price:.2f}</div>
+                                    <div style="font-weight: bold; {change_style}">₹{eod_price:.2f} ({pct_change:+.2f}%)</div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; padding: 3px 0; align-items: center;">
+                                    <div style="text-align: left; font-weight: bold; color: #fff;">RSI</div>
+                                    <div style="color: #cbd5e1;">{disp_sig_rsi}</div>
+                                    <div style="color: #cbd5e1;">{disp_eod_rsi}</div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; padding: 3px 0; align-items: center;">
+                                    <div style="text-align: left; font-weight: bold; color: #fff;">Vol Ratio</div>
+                                    <div style="color: #cbd5e1;">{disp_sig_vol}</div>
+                                    <div style="color: #cbd5e1;">{disp_eod_vol}</div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; padding: 3px 0; align-items: center;">
+                                    <div style="text-align: left; font-weight: bold; color: #fff;">Option PCR</div>
+                                    <div style="color: #cbd5e1;">{disp_sig_pcr}</div>
+                                    <div style="color: #cbd5e1;">{disp_eod_pcr}</div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; padding: 3px 0; align-items: center;">
+                                    <div style="text-align: left; font-weight: bold; color: #fff;">MACD Hist</div>
+                                    <div style="color: #cbd5e1;">{disp_sig_hist}</div>
+                                    <div style="color: #cbd5e1;">{disp_eod_hist}</div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 11px; padding: 3px 0; align-items: center; border-top: 1px dashed var(--border); margin-top: 2px; padding-top: 4px;">
+                                    <div style="text-align: left; font-weight: bold; color: #fff;">Nifty Index</div>
+                                    <div style="color: var(--text-muted);">Signal Time</div>
+                                    <div style="font-weight: bold; color: { '#10b981' if (nifty_change is not None and nifty_change > 0) else '#ef4444' if (nifty_change is not None and nifty_change < 0) else 'var(--text-muted)' };">{disp_nifty_change}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
                 </tr>
                 """
                 
@@ -3134,6 +3318,14 @@ def generate_dashboard(symbols):
                 }}
             }} catch (e) {{
                 showToast("Connection failed.", true);
+            }}
+        }}
+
+        function toggleItemDetails(itemId) {{
+            const detailsRow = document.getElementById('details-' + itemId);
+            if (detailsRow) {{
+                const isHidden = detailsRow.style.display === 'none';
+                detailsRow.style.display = isHidden ? 'table-row' : 'none';
             }}
         }}
 

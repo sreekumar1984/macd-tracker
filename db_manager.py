@@ -91,7 +91,16 @@ def init_db():
             pct_change REAL,
             status TEXT NOT NULL, -- 'SUCCESS', 'FAILED', 'NEUTRAL'
             failure_reason TEXT,
-            eval_timestamp TEXT NOT NULL
+            eval_timestamp TEXT NOT NULL,
+            signal_rsi REAL,
+            eod_rsi REAL,
+            signal_vol_ratio REAL,
+            eod_vol_ratio REAL,
+            signal_pcr REAL,
+            eod_pcr REAL,
+            nifty_change REAL,
+            signal_hist REAL,
+            eod_hist REAL
         )
     """)
 
@@ -158,6 +167,25 @@ def init_db():
         if new_col not in alert_columns:
             print(f"  🗄️ Database Migration: Adding '{new_col}' column to 'alerts_triggered'...")
             cursor.execute(f"ALTER TABLE alerts_triggered ADD COLUMN {new_col} REAL")
+            
+    # Also migrate alert_retrospectives
+    cursor.execute("PRAGMA table_info(alert_retrospectives)")
+    retro_columns = [col[1] for col in cursor.fetchall()]
+    new_retro_cols = {
+        'signal_rsi': 'REAL',
+        'eod_rsi': 'REAL',
+        'signal_vol_ratio': 'REAL',
+        'eod_vol_ratio': 'REAL',
+        'signal_pcr': 'REAL',
+        'eod_pcr': 'REAL',
+        'nifty_change': 'REAL',
+        'signal_hist': 'REAL',
+        'eod_hist': 'REAL'
+    }
+    for col_name, col_type in new_retro_cols.items():
+        if col_name not in retro_columns:
+            print(f"  🗄️ Database Migration: Adding '{col_name}' column to 'alert_retrospectives'...")
+            cursor.execute(f"ALTER TABLE alert_retrospectives ADD COLUMN {col_name} {col_type}")
     
     # Create indexes for fast querying
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_records_symbol_time ON macd_records (symbol, timestamp)")
@@ -229,13 +257,17 @@ def insert_alerts(alerts):
 def insert_retrospectives(retros):
     """
     retros is a list of tuples:
-    (alert_timestamp, symbol, alert_type, signal_price, eod_price, pct_change, status, failure_reason, eval_timestamp)
+    (alert_timestamp, symbol, alert_type, signal_price, eod_price, pct_change, status, failure_reason, eval_timestamp,
+     signal_rsi, eod_rsi, signal_vol_ratio, eod_vol_ratio, signal_pcr, eod_pcr, nifty_change, signal_hist, eod_hist)
     """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.executemany("""
-        INSERT INTO alert_retrospectives (alert_timestamp, symbol, alert_type, signal_price, eod_price, pct_change, status, failure_reason, eval_timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO alert_retrospectives (
+            alert_timestamp, symbol, alert_type, signal_price, eod_price, pct_change, status, failure_reason, eval_timestamp,
+            signal_rsi, eod_rsi, signal_vol_ratio, eod_vol_ratio, signal_pcr, eod_pcr, nifty_change, signal_hist, eod_hist
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, retros)
     conn.commit()
     conn.close()
