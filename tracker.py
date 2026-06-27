@@ -435,15 +435,19 @@ def _poll_and_save_impl(watchlist, force=False):
     current_date_str = now.strftime("%Y-%m-%d")
     if now.hour > 15 or (now.hour == 15 and now.minute >= 30):
         if LAST_EOD_RUN_DATE != current_date_str:
-            print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
-            FETCH_STATUS["message"] = "Running EOD Retrospective..."
-            try:
-                analyzer.run_eod_retrospective(current_date_str)
-                LAST_EOD_RUN_DATE = current_date_str
-                # Re-generate the dashboard so EOD stats show up
-                analyzer.generate_dashboard(watchlist)
-            except Exception as e:
-                print(f"  ⚠️ Error running EOD Retrospective: {e}")
+            config = load_config()
+            if config.get("enable_eod_retrospective", True):
+                print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
+                FETCH_STATUS["message"] = "Running EOD Retrospective..."
+                try:
+                    analyzer.run_eod_retrospective(current_date_str)
+                    LAST_EOD_RUN_DATE = current_date_str
+                    # Re-generate the dashboard so EOD stats show up
+                    analyzer.generate_dashboard(watchlist)
+                except Exception as e:
+                    print(f"  ⚠️ Error running EOD Retrospective: {e}")
+            else:
+                print("  💤 EOD Market Closed, but EOD Retrospective is disabled in config. Skipping retrospective run.")
         
     if force:
         print(f"\n⚡ [Force Fetch Started] {timestamp_str} - Querying {len(watchlist)} F&O symbols (Bypassing market hours)...")
@@ -558,12 +562,16 @@ def _poll_and_save_impl(watchlist, force=False):
         current_date_str = now.strftime("%Y-%m-%d")
         if now.hour > 15 or (now.hour == 15 and now.minute >= 30):
             if LAST_EOD_RUN_DATE != current_date_str:
-                print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
-                FETCH_STATUS["message"] = "Running EOD Retrospective..."
-                analyzer.run_eod_retrospective(current_date_str)
-                LAST_EOD_RUN_DATE = current_date_str
-                # Re-generate the dashboard so EOD stats show up
-                analyzer.generate_dashboard(watchlist)
+                config = load_config()
+                if config.get("enable_eod_retrospective", True):
+                    print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
+                    FETCH_STATUS["message"] = "Running EOD Retrospective..."
+                    analyzer.run_eod_retrospective(current_date_str)
+                    LAST_EOD_RUN_DATE = current_date_str
+                    # Re-generate the dashboard so EOD stats show up
+                    analyzer.generate_dashboard(watchlist)
+                else:
+                    print("  💤 EOD Market Closed, but EOD Retrospective is disabled in config. Skipping retrospective run.")
     else:
         print("  ⚠️ No valid records to save.")
         FETCH_STATUS["message"] = "No valid records retrieved."
@@ -601,12 +609,17 @@ def main():
     print("Press Ctrl+C to stop the daemon.\n")
     
     # Run EOD retrospective recovery on startup
-    print("  🔍 Checking for missing EOD retrospectives on startup...")
-    try:
-        analyzer.run_eod_retrospective()  # Scans last 30 days and catches up on missing evaluations
+    config = load_config()
+    if config.get("enable_eod_retrospective", True):
+        print("  🔍 Checking for missing EOD retrospectives on startup...")
+        try:
+            analyzer.run_eod_retrospective()  # Scans last 30 days and catches up on missing evaluations
+            analyzer.generate_dashboard(watchlist)
+        except Exception as e:
+            print(f"  ⚠️ Error running startup retrospectives: {e}")
+    else:
+        print("💤 EOD Retrospective is disabled in config. Skipping startup retrospective checks.")
         analyzer.generate_dashboard(watchlist)
-    except Exception as e:
-        print(f"  ⚠️ Error running startup retrospectives: {e}")
         
     if config.get("tracking_active", True):
         poll_and_save(watchlist)

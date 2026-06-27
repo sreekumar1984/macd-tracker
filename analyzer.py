@@ -929,22 +929,28 @@ def generate_dashboard(symbols):
         """
         
     ai_status_badge = '<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">ACTIVE</span>' if config.get("enable_adaptive_ai_filters", False) else '<span style="background: rgba(156, 163, 175, 0.2); color: #9ca3af; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">DISABLED (MONITORING ONLY)</span>'
-    
+    is_ai_active = config.get("enable_adaptive_ai_filters", False)
+    is_ai_active_js = "true" if is_ai_active else "false"
+    ai_btn_bg = "#ef4444" if is_ai_active else "#10b981"
+    ai_btn_text = "🔴 Stop AI Optimization" if is_ai_active else "🟢 Start AI Optimization"
+
     ai_html = f"""
-    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
         <div>
-            <h2 style="font-family: 'Outfit', sans-serif; font-size: 22px; color: #fff; margin-bottom: 4px;">🤖 Inbuilt AI Optimizer & Parameter Tuning</h2>
-            <p style="font-size: 13px; color: var(--text-muted);">
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 20px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                🤖 Inbuilt AI Optimizer & Parameter Tuning {ai_status_badge}
+            </h2>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 0;">
                 Learns from local trade retrospectives to formulate filters that suppress false signals (low-conviction whipsaws).
             </p>
         </div>
-        <div style="text-align: right; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 12px; color: var(--text-muted);">AI Suppression:</span>
-            {{ai_status_badge}}
-        </div>
+        <button id="btn-toggle-ai-opt" onclick="toggleAISuppression({is_ai_active_js})"
+                style="background: {ai_btn_bg}; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+            {ai_btn_text}
+        </button>
     </div>
     
-    {{ai_status_banner}}
+    {ai_status_banner}
     
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
         <div>
@@ -999,6 +1005,29 @@ def generate_dashboard(symbols):
             
         retros_by_date[date_part]["items"].append(r)
         
+    is_retro_active = config.get("enable_eod_retrospective", True)
+    is_retro_active_js = "true" if is_retro_active else "false"
+    retro_status_badge = '<span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">ACTIVE</span>' if is_retro_active else '<span style="background: rgba(156, 163, 175, 0.2); color: #9ca3af; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">DISABLED</span>'
+    retro_btn_bg = "#ef4444" if is_retro_active else "#10b981"
+    retro_btn_text = "🔴 Stop EOD Retrospection" if is_retro_active else "🟢 Start EOD Retrospection"
+    
+    retro_control_html = f"""
+    <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
+        <div>
+            <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                🔄 EOD Retrospective Runner {retro_status_badge}
+            </h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 0;">
+                If enabled, the tracker will automatically grade and backtest signals against closing prices every day after 3:30 PM.
+            </p>
+        </div>
+        <button id="btn-toggle-retro" onclick="toggleEODRetrospective({is_retro_active_js})"
+                style="background: {retro_btn_bg}; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+            {retro_btn_text}
+        </button>
+    </div>
+    """
+
     retro_html = ""
     if not retros_by_date:
         retro_html = """
@@ -1968,7 +1997,7 @@ def generate_dashboard(symbols):
                     Evaluates accuracy of alerts generated throughout the day against 3:30 PM closing prices, performing automated diagnostic analyses on failed signals.
                 </p>
             </div>
-            {retro_html}
+            {retro_control_html}{retro_html}
         </div>
     </div>
     
@@ -2002,9 +2031,14 @@ def generate_dashboard(symbols):
                 <input type="number" step="0.05" id="inp-increase">
             </div>
             
-            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 16px; margin-bottom: 24px;">
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 16px; margin-bottom: 12px;">
                 <input type="checkbox" id="cfg-enable-ai" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
                 <label for="cfg-enable-ai" style="margin-bottom: 0; cursor: pointer; font-weight: bold; color: #fff;">🤖 Enable Adaptive AI Filtering (Low Conviction Suppression)</label>
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 12px; margin-bottom: 24px;">
+                <input type="checkbox" id="cfg-enable-retro" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
+                <label for="cfg-enable-retro" style="margin-bottom: 0; cursor: pointer; font-weight: bold; color: #fff;">🔍 Enable EOD Retrospective Analysis</label>
             </div>
             
             <button class="btn-submit" onclick="saveConfig()">💾 Save Configuration</button>
@@ -2612,6 +2646,7 @@ def generate_dashboard(symbols):
                     document.getElementById('inp-momentum').value = cfg.momentum_threshold;
                     document.getElementById('inp-increase').value = cfg.min_macd_increase_alert;
                     document.getElementById('cfg-enable-ai').checked = cfg.enable_adaptive_ai_filters || false;
+                    document.getElementById('cfg-enable-retro').checked = cfg.enable_eod_retrospective !== false;
                     
                     const loggingEnabled = cfg.logging_enabled !== false;
                     const loggingCb = document.getElementById('cfg-enable-logging');
@@ -2635,6 +2670,7 @@ def generate_dashboard(symbols):
                 momentum_threshold: parseFloat(document.getElementById('inp-momentum').value),
                 min_macd_increase_alert: parseFloat(document.getElementById('inp-increase').value),
                 enable_adaptive_ai_filters: document.getElementById('cfg-enable-ai').checked,
+                enable_eod_retrospective: document.getElementById('cfg-enable-retro').checked,
                 logging_enabled: document.getElementById('cfg-enable-logging') ? document.getElementById('cfg-enable-logging').checked : true
             }};
             
@@ -3035,6 +3071,42 @@ def generate_dashboard(symbols):
                     updateDashboardSeamlessly();
                 }} else {{
                     showToast("Error updating logging state.", true);
+                }}
+            }} catch (e) {{
+                showToast("Connection failed.", true);
+            }}
+        }}
+
+        async function toggleAISuppression(isActive) {{
+            try {{
+                const r = await fetch(getApiUrl('/config'), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ enable_adaptive_ai_filters: !isActive }})
+                }});
+                if (r.ok) {{
+                    showToast(!isActive ? "🤖 AI Optimization activated!" : "⏸ AI Optimization stopped!", false);
+                    setTimeout(() => location.reload(), 1000);
+                }} else {{
+                    showToast("Error updating AI Optimization state.", true);
+                }}
+            }} catch (e) {{
+                showToast("Connection failed.", true);
+            }}
+        }}
+
+        async function toggleEODRetrospective(isActive) {{
+            try {{
+                const r = await fetch(getApiUrl('/config'), {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ enable_eod_retrospective: !isActive }})
+                }});
+                if (r.ok) {{
+                    showToast(!isActive ? "🔄 EOD Retrospective activated!" : "⏸ EOD Retrospective stopped!", false);
+                    setTimeout(() => location.reload(), 1000);
+                }} else {{
+                    showToast("Error updating retrospective state.", true);
                 }}
             }} catch (e) {{
                 showToast("Connection failed.", true);
