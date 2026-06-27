@@ -165,6 +165,7 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"Page not found")
 
     def do_POST(self):
+        global WATCHLIST
         parsed = urlparse(self.path)
         if parsed.path == '/config':
             content_length = int(self.headers['Content-Length'])
@@ -216,7 +217,6 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 return
                 
             try:
-                global WATCHLIST
                 if not WATCHLIST:
                     from watchlist_manager import WATCHLIST_PATH
                     if os.path.exists(WATCHLIST_PATH):
@@ -252,7 +252,6 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
         elif parsed.path == '/force_retro':
             try:
-                global WATCHLIST
                 if not WATCHLIST:
                     from watchlist_manager import WATCHLIST_PATH
                     if os.path.exists(WATCHLIST_PATH):
