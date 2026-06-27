@@ -678,6 +678,12 @@ def run_eod_retrospective(date_str=None, force=False):
             if now.hour < 15 or (now.hour == 15 and now.minute < 30):
                 continue # Skip today's evaluation for now (market still open)
                 
+        if force:
+            # Delete existing retrospective entries for this date to allow clean re-evaluation and detailed logging
+            cursor.execute("DELETE FROM alert_retrospectives WHERE alert_timestamp LIKE ?", (f"{eval_date}%",))
+            conn.commit()
+            logger.info(f"🔄 [Retrospective] Cleared existing EOD records for {eval_date} to force re-evaluation.")
+                
         # Get all alerts for eval_date that do not have a retrospective yet
         cursor.execute("""
             SELECT a.id, a.timestamp, a.symbol, a.price, a.alert_type, a.rsi, a.volume, a.average_volume

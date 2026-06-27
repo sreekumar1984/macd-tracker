@@ -266,7 +266,7 @@
             <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;" id="monitoring-status-container">
                 <span class="pulse" id="status-pulse"></span> <span id="status-text">LIVE MONITORING</span>
             </div>
-            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-27 20:51:57</strong></div>
+            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-27 20:56:10</strong></div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div id="fetch-progress-container" style="display: none; font-size: 11px; text-align: right; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px; color: #60a5fa; min-width: 180px;">
                     <div id="fetch-progress-text" style="font-weight: 600; margin-bottom: 2px;">Initializing...</div>
@@ -10718,16 +10718,7 @@
                 <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
                     Live logs from the daemon process tracking API requests, calculations, database writes, and memory metrics.
                 </div>
-                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 22:44:24,874 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:44:25,000 [INFO] tracker: 💾 Current process RAM usage: 832.78 MB
-2026-06-26 22:44:25,000 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 22:44:27,258 [INFO] tracker: 💾 Current process RAM usage: 833.94 MB
-2026-06-26 22:44:27,258 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 22:44:28,140 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:44:32,508 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:44:32,508 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:44:32,631 [INFO] tracker: 💾 Current process RAM usage: 834.53 MB
+                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 22:44:32,631 [INFO] tracker: 💾 Current process RAM usage: 834.53 MB
 2026-06-26 22:44:32,631 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
 2026-06-26 22:44:35,204 [INFO] tracker: 💾 Current process RAM usage: 835.72 MB
 2026-06-26 22:44:35,204 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
@@ -11018,6 +11009,15 @@
 2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-21
 2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-26
 2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-27
+2026-06-27 20:54:12,990 [INFO] tracker: ⚡ [Web Request] Force EOD Retrospective triggered via Web Dashboard. Starting background thread...
+2026-06-27 20:54:12,993 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: True
+2026-06-27 20:54:12,994 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-17
+2026-06-27 20:54:12,994 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-18
+2026-06-27 20:54:12,994 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-20
+2026-06-27 20:54:12,994 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-21
+2026-06-27 20:54:12,995 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-26
+2026-06-27 20:54:12,995 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-27
+2026-06-27 20:54:13,035 [INFO] tracker:   ✅ Manual EOD Retrospective completed.
 </pre>
                 <div id="system-logs-disabled-message" style="display: none; padding: 40px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 8px; background: #0f172a;">
                     <span style="font-size: 24px; display: block; margin-bottom: 8px;">⏸️</span>
