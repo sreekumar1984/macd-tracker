@@ -250,6 +250,40 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+        elif parsed.path == '/force_retro':
+            try:
+                global WATCHLIST
+                if not WATCHLIST:
+                    from watchlist_manager import WATCHLIST_PATH
+                    if os.path.exists(WATCHLIST_PATH):
+                        with open(WATCHLIST_PATH, "r") as f:
+                            WATCHLIST = json.load(f)
+                    else:
+                        WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
+                
+                print("⚡ [Web Request] Force EOD Retrospective triggered via Web Dashboard. Starting background thread...")
+                
+                def run_force_retro_async():
+                    try:
+                        analyzer.run_eod_retrospective(force=True)
+                        analyzer.generate_dashboard(WATCHLIST)
+                        print("  ✅ Manual EOD Retrospective completed.")
+                    except Exception as e:
+                        print(f"❌ Error during manual retrospective background thread: {e}")
+                
+                threading.Thread(target=run_force_retro_async, daemon=True).start()
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "started", "message": "Manual retrospective run started in background"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
         elif parsed.path == '/clear_logs':
             try:
                 if os.path.exists(LOG_FILE_PATH):

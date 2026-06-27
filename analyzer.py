@@ -638,7 +638,7 @@ def analyze_all_symbols(symbols):
     generate_dashboard(symbols)
     return alerts_triggered
 
-def run_eod_retrospective(date_str=None):
+def run_eod_retrospective(date_str=None, force=False):
     db_path = "/Users/sree/macd_momentum_tracker/db/macd_history.db"
     if not os.path.exists(db_path):
         return
@@ -670,8 +670,8 @@ def run_eod_retrospective(date_str=None):
     today_str = now.strftime("%Y-%m-%d")
     
     for eval_date in dates_to_eval:
-        # If it's today's date, only run if the market is closed (after 15:30)
-        if eval_date == today_str:
+        # If it's today's date, only run if the market is closed (after 15:30) or if forced manually
+        if eval_date == today_str and not force:
             if now.hour < 15 or (now.hour == 15 and now.minute < 30):
                 continue # Skip today's evaluation for now (market still open)
                 
@@ -1021,10 +1021,16 @@ def generate_dashboard(symbols):
                 If enabled, the tracker will automatically grade and backtest signals against closing prices every day after 3:30 PM.
             </p>
         </div>
-        <button id="btn-toggle-retro" onclick="toggleEODRetrospective({is_retro_active_js})"
-                style="background: {retro_btn_bg}; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
-            {retro_btn_text}
-        </button>
+        <div style="display: flex; gap: 12px;">
+            <button id="btn-force-retro" onclick="triggerForceRetrospective()"
+                    style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                ⚡ Run Retrospective Now
+            </button>
+            <button id="btn-toggle-retro" onclick="toggleEODRetrospective({is_retro_active_js})"
+                    style="background: {retro_btn_bg}; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                {retro_btn_text}
+            </button>
+        </div>
     </div>
     """
 
@@ -3110,6 +3116,33 @@ def generate_dashboard(symbols):
                 }}
             }} catch (e) {{
                 showToast("Connection failed.", true);
+            }}
+        }}
+
+        async function triggerForceRetrospective() {{
+            const btn = document.getElementById('btn-force-retro');
+            if (btn) {{
+                btn.disabled = true;
+                btn.textContent = "⏳ Running...";
+            }}
+            try {{
+                const r = await fetch(getApiUrl('/force_retro'), {{ method: 'POST' }});
+                if (r.ok) {{
+                    showToast("⚡ Retrospective evaluation started in the background!", false);
+                    setTimeout(() => location.reload(), 1500);
+                }} else {{
+                    showToast("Error triggering retrospective.", true);
+                    if (btn) {{
+                        btn.disabled = false;
+                        btn.textContent = "⚡ Run Retrospective Now";
+                    }}
+                }}
+            }} catch (e) {{
+                showToast("Connection failed.", true);
+                if (btn) {{
+                    btn.disabled = false;
+                    btn.textContent = "⚡ Run Retrospective Now";
+                }}
             }}
         }}
 

@@ -259,14 +259,14 @@
             <h1>📊 MACD Momentum & Crossover Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <span class="meta">Monitoring all F&O stocks every 2 minutes</span>
-                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 26.92 MB (Capped at 30 Days)</span>
+                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 27.04 MB (Capped at 30 Days)</span>
             </div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
             <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;" id="monitoring-status-container">
                 <span class="pulse" id="status-pulse"></span> <span id="status-text">LIVE MONITORING</span>
             </div>
-            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-27 20:34:08</strong></div>
+            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-27 20:43:12</strong></div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div id="fetch-progress-container" style="display: none; font-size: 11px; text-align: right; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px; color: #60a5fa; min-width: 180px;">
                     <div id="fetch-progress-text" style="font-weight: 600; margin-bottom: 2px;">Initializing...</div>
@@ -1159,9 +1159,9 @@
             <td class="col-macd_15" style="color: #22c55e; font-weight: bold;">7.189</td>
             <td class="col-signal_15">7.393</td>
             <td class="col-hist_15" style="color: #ef4444; font-weight: bold;">-0.203</td>
-            <td class="col-macd_45" style="color: #cbd5e1; font-weight: bold;">—</td>
-            <td class="col-signal_45">—</td>
-            <td class="col-hist_45" style="color: #cbd5e1; font-weight: bold;">—</td>
+            <td class="col-macd_45" style="color: #22c55e; font-weight: bold;">8.214</td>
+            <td class="col-signal_45">4.475</td>
+            <td class="col-hist_45" style="color: #22c55e; font-weight: bold;">+3.740</td>
             <td class="col-trend" style="color: var(--text-muted);">▬ 0.000</td>
             <td class="col-rsi_15" style="color: #cbd5e1;">63.10</td>
             <td class="col-rsi_30">67.20</td>
@@ -3346,9 +3346,9 @@
             <td class="col-macd_15" style="color: #cbd5e1; font-weight: bold;">-0.363</td>
             <td class="col-signal_15">-0.249</td>
             <td class="col-hist_15" style="color: #ef4444; font-weight: bold;">-0.114</td>
-            <td class="col-macd_45" style="color: #cbd5e1; font-weight: bold;">—</td>
-            <td class="col-signal_45">—</td>
-            <td class="col-hist_45" style="color: #cbd5e1; font-weight: bold;">—</td>
+            <td class="col-macd_45" style="color: #cbd5e1; font-weight: bold;">-0.567</td>
+            <td class="col-signal_45">-0.444</td>
+            <td class="col-hist_45" style="color: #ef4444; font-weight: bold;">-0.123</td>
             <td class="col-trend" style="color: var(--text-muted);">▬ 0.000</td>
             <td class="col-rsi_15" style="color: #10b981; font-weight: bold; background: rgba(16, 185, 129, 0.15); padding: 2px 6px; border-radius: 4px;">24.96</td>
             <td class="col-rsi_30">28.94</td>
@@ -3805,9 +3805,9 @@
             <td class="col-macd_15" style="color: #cbd5e1; font-weight: bold;">-0.882</td>
             <td class="col-signal_15">-0.880</td>
             <td class="col-hist_15" style="color: #ef4444; font-weight: bold;">-0.002</td>
-            <td class="col-macd_45" style="color: #cbd5e1; font-weight: bold;">—</td>
-            <td class="col-signal_45">—</td>
-            <td class="col-hist_45" style="color: #cbd5e1; font-weight: bold;">—</td>
+            <td class="col-macd_45" style="color: #cbd5e1; font-weight: bold;">-0.382</td>
+            <td class="col-signal_45">0.402</td>
+            <td class="col-hist_45" style="color: #ef4444; font-weight: bold;">-0.784</td>
             <td class="col-trend" style="color: var(--text-muted);">▬ 0.000</td>
             <td class="col-rsi_15" style="color: #cbd5e1;">37.17</td>
             <td class="col-rsi_30">39.89</td>
@@ -7202,16 +7202,22 @@
     <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
         <div>
             <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-                🔄 EOD Retrospective Runner <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">ACTIVE</span>
+                🔄 EOD Retrospective Runner <span style="background: rgba(156, 163, 175, 0.2); color: #9ca3af; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">DISABLED</span>
             </h3>
             <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 0;">
                 If enabled, the tracker will automatically grade and backtest signals against closing prices every day after 3:30 PM.
             </p>
         </div>
-        <button id="btn-toggle-retro" onclick="toggleEODRetrospective(true)"
-                style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
-            🔴 Stop EOD Retrospection
-        </button>
+        <div style="display: flex; gap: 12px;">
+            <button id="btn-force-retro" onclick="triggerForceRetrospective()"
+                    style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                ⚡ Run Retrospective Now
+            </button>
+            <button id="btn-toggle-retro" onclick="toggleEODRetrospective(false)"
+                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                🟢 Start EOD Retrospection
+            </button>
+        </div>
     </div>
     
             <div class="card" style="margin-bottom: 16px;">
@@ -10376,15 +10382,15 @@
     <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
         <div>
             <h2 style="font-family: 'Outfit', sans-serif; font-size: 20px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-                🤖 Inbuilt AI Optimizer & Parameter Tuning <span style="background: rgba(156, 163, 175, 0.2); color: #9ca3af; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">DISABLED (MONITORING ONLY)</span>
+                🤖 Inbuilt AI Optimizer & Parameter Tuning <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">ACTIVE</span>
             </h2>
             <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 0;">
                 Learns from local trade retrospectives to formulate filters that suppress false signals (low-conviction whipsaws).
             </p>
         </div>
-        <button id="btn-toggle-ai-opt" onclick="toggleAISuppression(false)"
-                style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
-            🟢 Start AI Optimization
+        <button id="btn-toggle-ai-opt" onclick="toggleAISuppression(true)"
+                style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+            🔴 Stop AI Optimization
         </button>
     </div>
     
@@ -10515,51 +10521,7 @@
                 <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
                     Live logs from the daemon process tracking API requests, calculations, database writes, and memory metrics.
                 </div>
-                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 22:37:09,793 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 22:37:15,360 [INFO] tracker: 💾 Current process RAM usage: 746.98 MB
-2026-06-26 22:38:20,959 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 22:38:20,960 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 22:38:22,394 [INFO] tracker: 💾 Current process RAM usage: 802.55 MB
-2026-06-26 22:38:22,394 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 22:38:23,409 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:38:23,909 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:38:23,909 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:38:24,010 [INFO] tracker: 💾 Current process RAM usage: 802.84 MB
-2026-06-26 22:38:24,011 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 22:38:29,556 [INFO] tracker: 💾 Current process RAM usage: 803.31 MB
-2026-06-26 22:38:29,557 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 22:38:30,494 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:38:35,938 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:38:35,938 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:38:36,064 [INFO] tracker: 💾 Current process RAM usage: 804.45 MB
-2026-06-26 22:38:36,064 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 22:38:42,457 [INFO] tracker: 💾 Current process RAM usage: 805.30 MB
-2026-06-26 22:38:42,457 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 22:38:43,090 [INFO] tracker: 💾 Current process RAM usage: 805.30 MB
-2026-06-26 22:39:50,706 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 22:39:50,707 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 22:39:56,889 [INFO] tracker: 💾 Current process RAM usage: 762.58 MB
-2026-06-26 22:39:56,889 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 22:39:58,098 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:39:58,806 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:39:58,806 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:39:58,909 [INFO] tracker: 💾 Current process RAM usage: 763.06 MB
-2026-06-26 22:39:58,909 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 22:40:05,327 [INFO] tracker: 💾 Current process RAM usage: 764.72 MB
-2026-06-26 22:40:05,327 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 22:40:05,912 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:40:11,742 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:40:11,742 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:40:11,865 [INFO] tracker: 💾 Current process RAM usage: 764.86 MB
-2026-06-26 22:40:11,865 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 22:40:13,243 [INFO] tracker: 💾 Current process RAM usage: 765.56 MB
-2026-06-26 22:40:13,243 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 22:40:18,567 [INFO] tracker: 💾 Current process RAM usage: 765.56 MB
-2026-06-26 22:41:18,626 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 22:41:18,626 [INFO] tracker: Fetching 45-minute MACD from yfinance...
 2026-06-26 22:41:18,628 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
 2026-06-26 22:41:20,311 [INFO] tracker: 💾 Current process RAM usage: 815.19 MB
 2026-06-26 22:41:20,311 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
@@ -10815,6 +10777,50 @@
 2026-06-26 22:59:07,657 [INFO] tracker: 💾 Current process RAM usage: 793.59 MB
 2026-06-26 22:59:07,657 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
 2026-06-26 22:59:13,347 [INFO] tracker: 💾 Current process RAM usage: 793.59 MB
+2026-06-27 20:38:15,330 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-27 20:38:15,331 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-27 20:38:16,982 [INFO] tracker: 💾 Current process RAM usage: 214.80 MB
+2026-06-27 20:38:16,983 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-27 20:38:18,795 [ERROR] yfinance: HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: NIFTY-FIN-SERVICE.NS"}}}
+2026-06-27 20:38:19,319 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:38:19,329 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:38:19,330 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:38:19,405 [INFO] tracker: 💾 Current process RAM usage: 216.34 MB
+2026-06-27 20:38:19,405 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-27 20:38:25,732 [INFO] tracker: 💾 Current process RAM usage: 218.05 MB
+2026-06-27 20:38:25,732 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-27 20:38:27,588 [ERROR] yfinance: HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: NIFTYNXT50.NS"}}}
+2026-06-27 20:38:28,173 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:38:31,348 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:38:31,348 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:38:31,416 [INFO] tracker: 💾 Current process RAM usage: 220.81 MB
+2026-06-27 20:38:31,416 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-27 20:38:32,541 [INFO] tracker: 💾 Current process RAM usage: 222.66 MB
+2026-06-27 20:38:32,541 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-27 20:38:33,059 [INFO] tracker: 💾 Current process RAM usage: 223.14 MB
+2026-06-27 20:41:07,200 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-27 20:41:07,202 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-27 20:41:13,420 [INFO] tracker: 💾 Current process RAM usage: 225.78 MB
+2026-06-27 20:41:13,421 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-27 20:41:14,755 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:41:15,037 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:41:15,037 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:41:15,100 [INFO] tracker: 💾 Current process RAM usage: 226.92 MB
+2026-06-27 20:41:15,100 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-27 20:41:21,315 [INFO] tracker: 💾 Current process RAM usage: 228.06 MB
+2026-06-27 20:41:21,315 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-27 20:41:22,782 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:41:22,785 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:41:22,786 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:41:22,865 [INFO] tracker: 💾 Current process RAM usage: 228.89 MB
+2026-06-27 20:41:22,865 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-27 20:41:29,260 [INFO] tracker: 💾 Current process RAM usage: 229.47 MB
+2026-06-27 20:41:29,260 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-27 20:41:29,760 [INFO] tracker: 💾 Current process RAM usage: 229.64 MB
 </pre>
                 <div id="system-logs-disabled-message" style="display: none; padding: 40px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 8px; background: #0f172a;">
                     <span style="font-size: 24px; display: block; margin-bottom: 8px;">⏸️</span>
@@ -11831,6 +11837,33 @@
                 }
             } catch (e) {
                 showToast("Connection failed.", true);
+            }
+        }
+
+        async function triggerForceRetrospective() {
+            const btn = document.getElementById('btn-force-retro');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "⏳ Running...";
+            }
+            try {
+                const r = await fetch(getApiUrl('/force_retro'), { method: 'POST' });
+                if (r.ok) {
+                    showToast("⚡ Retrospective evaluation started in the background!", false);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast("Error triggering retrospective.", true);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = "⚡ Run Retrospective Now";
+                    }
+                }
+            } catch (e) {
+                showToast("Connection failed.", true);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "⚡ Run Retrospective Now";
+                }
             }
         }
 

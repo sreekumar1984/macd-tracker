@@ -3,5 +3,8 @@
   "database_path": "db/macd_history.db",
   "momentum_threshold": 4.5,
   "min_macd_increase_alert": 0.2,
-  "logging_enabled": true
+  "logging_enabled": true,
+  "enable_eod_retrospective": false,
+  "enable_adaptive_ai_filters": true,
+  "tracking_active": false
 }
