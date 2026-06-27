@@ -2,6 +2,9 @@ import json
 import os
 import sqlite3
 from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger("tracker")
 
 # Import local db manager
 import db_manager
@@ -665,9 +668,9 @@ def run_eod_retrospective(date_str=None, force=False):
         """, (threshold,))
         dates_to_eval = [row[0] for row in cursor.fetchall()]
         
-    # Get current time for market close checks
     now = datetime.now()
     today_str = now.strftime("%Y-%m-%d")
+    logger.info(f"🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: {force}")
     
     for eval_date in dates_to_eval:
         # If it's today's date, only run if the market is closed (after 15:30) or if forced manually
@@ -685,7 +688,10 @@ def run_eod_retrospective(date_str=None, force=False):
         alerts = cursor.fetchall()
         
         if not alerts:
+            logger.info(f"🔍 [Retrospective] No new alerts found to evaluate for date: {eval_date}")
             continue
+            
+        logger.info(f"🔍 [Retrospective] Evaluating {len(alerts)} alerts for date: {eval_date}")
             
         # Fetch EOD Nifty price
         cursor.execute("""
@@ -799,18 +805,24 @@ def run_eod_retrospective(date_str=None, force=False):
                 eval_time
             ))
             
+            log_msg = f"🔍 [Retrospective] Evaluated {symbol} ({alert_type}) | Signal Price: ₹{signal_price:.2f} | EOD Price: ₹{eod_price:.2f} ({pct_change:+.2f}%) | Status: {status}"
+            if reason:
+                log_msg += f" (Reason: {reason})"
+            logger.info(log_msg)
+            
         if retros_to_insert:
             db_manager.insert_retrospectives(retros_to_insert)
-            print(f"  🔍 EOD Retrospective: Automatically evaluated {len(retros_to_insert)} alerts for {eval_date}.")
+            logger.info(f"🔍 [Retrospective] Saved {len(retros_to_insert)} evaluated retrospective records to database.")
             try:
+                logger.info("🤖 [Retrospective] Triggering AI Optimizer parameter tuning based on new retrospective data...")
                 opt_data = run_optimization_analysis()
                 if opt_data:
                     rules_path = "/Users/sree/macd_momentum_tracker/db/optimized_rules.json"
                     with open(rules_path, "w") as f:
                         json.dump(opt_data, f, indent=2)
-                    print("  🤖 Recalculated AI Optimizer rules based on new EOD data.")
+                    logger.info("🤖 [Retrospective] AI Optimizer parameter rules recalculated and saved.")
             except Exception as opt_err:
-                print(f"  ⚠️ Error running startup optimization update: {opt_err}")
+                logger.error(f"⚠️ [Retrospective] Error running optimization rules update: {opt_err}")
             
     conn.close()
 

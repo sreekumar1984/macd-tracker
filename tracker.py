@@ -260,15 +260,15 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                     else:
                         WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
                 
-                print("⚡ [Web Request] Force EOD Retrospective triggered via Web Dashboard. Starting background thread...")
+                logger.info("⚡ [Web Request] Force EOD Retrospective triggered via Web Dashboard. Starting background thread...")
                 
                 def run_force_retro_async():
                     try:
                         analyzer.run_eod_retrospective(force=True)
                         analyzer.generate_dashboard(WATCHLIST)
-                        print("  ✅ Manual EOD Retrospective completed.")
+                        logger.info("  ✅ Manual EOD Retrospective completed.")
                     except Exception as e:
-                        print(f"❌ Error during manual retrospective background thread: {e}")
+                        logger.error(f"❌ Error during manual retrospective background thread: {e}")
                 
                 threading.Thread(target=run_force_retro_async, daemon=True).start()
                 

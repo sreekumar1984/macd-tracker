@@ -259,14 +259,14 @@
             <h1>📊 MACD Momentum & Crossover Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <span class="meta">Monitoring all F&O stocks every 2 minutes</span>
-                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 27.04 MB (Capped at 30 Days)</span>
+                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 27.17 MB (Capped at 30 Days)</span>
             </div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
             <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;" id="monitoring-status-container">
                 <span class="pulse" id="status-pulse"></span> <span id="status-text">LIVE MONITORING</span>
             </div>
-            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-27 20:43:12</strong></div>
+            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-06-27 20:51:57</strong></div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div id="fetch-progress-container" style="display: none; font-size: 11px; text-align: right; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px; color: #60a5fa; min-width: 180px;">
                     <div id="fetch-progress-text" style="font-weight: 600; margin-bottom: 2px;">Initializing...</div>
@@ -7202,7 +7202,7 @@
     <div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
         <div>
             <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-                🔄 EOD Retrospective Runner <span style="background: rgba(156, 163, 175, 0.2); color: #9ca3af; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">DISABLED</span>
+                🔄 EOD Retrospective Runner <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px;">ACTIVE</span>
             </h3>
             <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 0;">
                 If enabled, the tracker will automatically grade and backtest signals against closing prices every day after 3:30 PM.
@@ -7213,13 +7213,210 @@
                     style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
                 ⚡ Run Retrospective Now
             </button>
-            <button id="btn-toggle-retro" onclick="toggleEODRetrospective(false)"
-                    style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
-                🟢 Start EOD Retrospection
+            <button id="btn-toggle-retro" onclick="toggleEODRetrospective(true)"
+                    style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                🔴 Stop EOD Retrospection
             </button>
         </div>
     </div>
     
+            <div class="card" style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleCollapse('2026-06-27')">
+                    <div>
+                        <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; color: #fff;">📅 Market Date: 2026-06-27</h3>
+                        <div style="display: flex; gap: 12px; margin-top: 4px; font-size: 12px; color: var(--text-muted);">
+                            <span>Total Signals: <strong>14</strong></span> |
+                            <span style="color: #4ade80;">Success: <strong>0</strong></span> |
+                            <span style="color: #f87171;">Failed: <strong>0</strong></span> |
+                            <span style="color: #9ca3af;">Neutral: <strong>14</strong></span>
+                        </div>
+                    </div>
+                    <div style="text-align: right; display: flex; align-items: center; gap: 16px;">
+                        <div>
+                            <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">EOD Win Rate</span>
+                            <span style="color: var(--text-muted); font-size: 20px; font-weight: 800; font-family: 'Outfit', sans-serif;">N/A</span>
+                        </div>
+                        <span id="arrow-2026-06-27" style="font-size: 18px; color: var(--text-muted); transition: transform 0.2s;">▼</span>
+                    </div>
+                </div>
+                
+                <div id="content-2026-06-27" style="display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+                    <div class="table-wrap" style="max-height: 350px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Signal Time</th>
+                                    <th>Symbol</th>
+                                    <th>Signal Type</th>
+                                    <th>Signal Price</th>
+                                    <th>EOD Close</th>
+                                    <th>Change %</th>
+                                    <th>Outcome</th>
+                                    <th>Post-Mortem Analysis / Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:AMBER</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹7659.00</td>
+                    <td>₹7659.00</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:ANGELONE</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹335.25</td>
+                    <td>₹335.25</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:BLUESTARCO</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹1637.20</td>
+                    <td>₹1637.20</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:CDSL</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹1317.00</td>
+                    <td>₹1317.00</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:ICICIPRULI</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹491.05</td>
+                    <td>₹491.05</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:IDFCFIRSTB</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹79.22</td>
+                    <td>₹79.22</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:INOXWIND</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹89.52</td>
+                    <td>₹89.52</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:JUBLFOOD</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹423.20</td>
+                    <td>₹423.20</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:KALYANKJIL</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹377.80</td>
+                    <td>₹377.80</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:LTM</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹3762.60</td>
+                    <td>₹3762.60</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:LUPIN</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹2343.50</td>
+                    <td>₹2343.50</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:PGEL</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹545.90</td>
+                    <td>₹545.90</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:TORNTPHARM</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹4516.20</td>
+                    <td>₹4516.20</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                <tr>
+                    <td>20:34:08</td>
+                    <td style="font-weight: bold; color: #fff;">NSE:VOLTAS</td>
+                    <td style="font-weight: 600;">VOLUME DRYUP</td>
+                    <td>₹1302.40</td>
+                    <td>₹1302.40</td>
+                    <td style="color: var(--text-muted); font-weight: bold;">+0.00%</td>
+                    <td><span style="background: #9ca3af20; color: #9ca3af; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 11px;">NEUTRAL</span></td>
+                    <td style="color: #cbd5e1; font-size: 12px;">Price remained compressed (Breakout pending)</td>
+                </tr>
+                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
             <div class="card" style="margin-bottom: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleCollapse('2026-06-26')">
                     <div>
@@ -10398,7 +10595,7 @@
         <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 24px; color: #cbd5e1; font-size: 13px; display: flex; align-items: center; gap: 16px;">
             <div style="font-size: 24px;">🤖</div>
             <div>
-                <strong>Inbuilt Intelligence Optimizer Active:</strong> Dynamically analyzing and optimizing parameters based on <strong>293</strong> EOD retrospective trials.
+                <strong>Inbuilt Intelligence Optimizer Active:</strong> Dynamically analyzing and optimizing parameters based on <strong>307</strong> EOD retrospective trials.
                 Recommendations are updated daily on market close to filter out historical whipsaws and increase the alert success rate.
             </div>
         </div>
@@ -10521,56 +10718,7 @@
                 <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
                     Live logs from the daemon process tracking API requests, calculations, database writes, and memory metrics.
                 </div>
-                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 22:41:18,626 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 22:41:18,628 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 22:41:20,311 [INFO] tracker: 💾 Current process RAM usage: 815.19 MB
-2026-06-26 22:41:20,311 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 22:41:21,575 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:41:26,862 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:41:26,862 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:41:26,987 [INFO] tracker: 💾 Current process RAM usage: 815.59 MB
-2026-06-26 22:41:26,987 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 22:41:28,688 [INFO] tracker: 💾 Current process RAM usage: 816.47 MB
-2026-06-26 22:41:28,688 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 22:41:29,511 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:41:33,933 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:41:33,933 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:41:34,054 [INFO] tracker: 💾 Current process RAM usage: 817.20 MB
-2026-06-26 22:41:34,054 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 22:41:36,401 [INFO] tracker: 💾 Current process RAM usage: 817.94 MB
-2026-06-26 22:41:36,401 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 22:41:37,028 [INFO] tracker: 💾 Current process RAM usage: 817.94 MB
-2026-06-26 22:42:54,161 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 22:42:54,162 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 22:43:00,499 [INFO] tracker: 💾 Current process RAM usage: 781.06 MB
-2026-06-26 22:43:00,500 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 22:43:01,447 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:43:02,040 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:43:02,040 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:43:02,148 [INFO] tracker: 💾 Current process RAM usage: 781.80 MB
-2026-06-26 22:43:02,148 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-06-26 22:43:08,609 [INFO] tracker: 💾 Current process RAM usage: 782.97 MB
-2026-06-26 22:43:08,609 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
-2026-06-26 22:43:09,086 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:43:10,073 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:43:10,073 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:43:10,180 [INFO] tracker: 💾 Current process RAM usage: 783.25 MB
-2026-06-26 22:43:10,180 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
-2026-06-26 22:43:15,567 [INFO] tracker: 💾 Current process RAM usage: 783.55 MB
-2026-06-26 22:43:15,567 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
-2026-06-26 22:43:17,271 [INFO] tracker: 💾 Current process RAM usage: 784.33 MB
-2026-06-26 22:44:12,497 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-06-26 22:44:12,498 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-06-26 22:44:18,630 [INFO] tracker: 💾 Current process RAM usage: 831.95 MB
-2026-06-26 22:44:18,630 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-06-26 22:44:19,936 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
-2026-06-26 22:44:24,874 [ERROR] yfinance: 
-1 Failed download:
-2026-06-26 22:44:24,874 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-06-26 22:44:24,874 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
 2026-06-26 22:44:25,000 [INFO] tracker: 💾 Current process RAM usage: 832.78 MB
 2026-06-26 22:44:25,000 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
 2026-06-26 22:44:27,258 [INFO] tracker: 💾 Current process RAM usage: 833.94 MB
@@ -10821,6 +10969,55 @@
 2026-06-27 20:41:29,260 [INFO] tracker: 💾 Current process RAM usage: 229.47 MB
 2026-06-27 20:41:29,260 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
 2026-06-27 20:41:29,760 [INFO] tracker: 💾 Current process RAM usage: 229.64 MB
+2026-06-27 20:46:30,091 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-27 20:46:30,092 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-27 20:46:36,064 [INFO] tracker: 💾 Current process RAM usage: 231.88 MB
+2026-06-27 20:46:36,064 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-27 20:46:37,405 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:46:42,203 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:46:42,204 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:46:42,270 [INFO] tracker: 💾 Current process RAM usage: 232.52 MB
+2026-06-27 20:46:42,270 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-27 20:46:44,187 [INFO] tracker: 💾 Current process RAM usage: 233.20 MB
+2026-06-27 20:46:44,187 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-27 20:46:45,816 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:46:50,288 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:46:50,289 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:46:50,346 [INFO] tracker: 💾 Current process RAM usage: 233.81 MB
+2026-06-27 20:46:50,346 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-27 20:46:56,110 [INFO] tracker: 💾 Current process RAM usage: 234.48 MB
+2026-06-27 20:46:56,110 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-27 20:46:58,371 [INFO] tracker: 💾 Current process RAM usage: 234.48 MB
+2026-06-27 20:47:03,174 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-06-27 20:47:03,174 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-06-27 20:47:04,316 [INFO] tracker: 💾 Current process RAM usage: 235.33 MB
+2026-06-27 20:47:04,316 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-06-27 20:47:05,720 [ERROR] yfinance: $NIFTY-FIN-SERVICE.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:47:09,991 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:47:09,992 [ERROR] yfinance: ['NIFTY-FIN-SERVICE.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:47:10,051 [INFO] tracker: 💾 Current process RAM usage: 236.05 MB
+2026-06-27 20:47:10,051 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-06-27 20:47:16,258 [INFO] tracker: 💾 Current process RAM usage: 236.70 MB
+2026-06-27 20:47:16,258 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-06-27 20:47:17,684 [ERROR] yfinance: $NIFTYNXT50.NS: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:47:22,353 [ERROR] yfinance: 
+1 Failed download:
+2026-06-27 20:47:22,353 [ERROR] yfinance: ['NIFTYNXT50.NS']: possibly delisted; no price data found  (period=10d) (Yahoo error = "No data found, symbol may be delisted")
+2026-06-27 20:47:22,415 [INFO] tracker: 💾 Current process RAM usage: 237.30 MB
+2026-06-27 20:47:22,415 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-06-27 20:47:23,942 [INFO] tracker: 💾 Current process RAM usage: 237.91 MB
+2026-06-27 20:47:23,942 [INFO] tracker: Downloading yfinance batch 6/6 (16 symbols)...
+2026-06-27 20:47:29,193 [INFO] tracker: 💾 Current process RAM usage: 237.91 MB
+2026-06-27 20:51:57,795 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: False
+2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-17
+2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-18
+2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-20
+2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-21
+2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-26
+2026-06-27 20:51:57,796 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-27
 </pre>
                 <div id="system-logs-disabled-message" style="display: none; padding: 40px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 8px; background: #0f172a;">
                     <span style="font-size: 24px; display: block; margin-bottom: 8px;">⏸️</span>
