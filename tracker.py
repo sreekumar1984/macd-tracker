@@ -5,12 +5,17 @@ import sys
 import time
 import threading
 import logging
+import socket
 from datetime import datetime, time as datetime_time
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 import requests
 import yfinance as yf
 import pandas as pd
+
+# Set global default socket timeout to prevent any HTTP/API connection from hanging indefinitely
+socket.setdefaulttimeout(30)
+
 
 # Import local modules
 import db_manager
@@ -23,6 +28,7 @@ CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 LAST_EOD_RUN_DATE = None
 WATCHLIST = []
 DB_WRITE_LOCK = threading.Lock()
+DATA_UPDATED_EVENT = threading.Event()
 
 # Setup logging to both file and stdout
 LOG_FILE_PATH = os.path.join(BASE_DIR, "tracker.log")
@@ -264,8 +270,9 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                 
                 def run_force_retro_async():
                     try:
-                        analyzer.run_eod_retrospective(force=True)
-                        analyzer.generate_dashboard(WATCHLIST)
+                        with DB_WRITE_LOCK:
+                            analyzer.run_eod_retrospective(force=True)
+                        DATA_UPDATED_EVENT.set()
                         logger.info("  ✅ Manual EOD Retrospective completed.")
                     except Exception as e:
                         logger.error(f"❌ Error during manual retrospective background thread: {e}")
@@ -308,9 +315,12 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
 def run_web_server():
     server_address = ('', 8080)
     try:
-        httpd = HTTPServer(server_address, TrackerWebHandler)
+        httpd = ThreadingHTTPServer(server_address, TrackerWebHandler)
         print("🚀 Dashboard Web Server running on http://localhost:8080/")
         httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping F&O MACD Momentum Tracker...")
+        sys.exit(0)
     except Exception as e:
         print(f"  ⚠️ Error starting web server: {e}")
 
@@ -365,7 +375,7 @@ def tv_to_yf_symbol(symbol):
     elif clean == "BANKNIFTY":
         return "^NSEBANK"
     elif clean == "FINNIFTY":
-        return "NIFTY-FIN-SERVICE.NS"
+        return "NIFTY_FIN_SERVICE.NS"
     elif clean == "MIDCPNIFTY":
         return "^NSEMDCP50"
     
@@ -386,8 +396,8 @@ def calculate_45m_macd_batch(watchlist):
         chunk_yf_symbols = yf_symbols[i:i + chunk_size]
         logger.info(f"Downloading yfinance batch {i // chunk_size + 1}/{(len(yf_symbols) - 1) // chunk_size + 1} ({len(chunk_yf_symbols)} symbols)...")
         try:
-            # Using 10 threads instead of 30 to limit CPU credit exhaustion
-            df = yf.download(chunk_yf_symbols, period="10d", interval="15m", group_by="ticker", threads=10, progress=False)
+            # Using 10 threads instead of 30 to limit CPU credit exhaustion and setting timeout to prevent hanging
+            df = yf.download(chunk_yf_symbols, period="10d", interval="15m", group_by="ticker", threads=10, progress=False, timeout=30)
             
             for yf_sym in chunk_yf_symbols:
                 try:
@@ -584,12 +594,6 @@ def _poll_and_save_impl(watchlist, force=False):
         # Housekeeping: delete records older than 30 days
         db_manager.cleanup_old_records(days=30)
         
-        # Trigger analyzer
-        print("  🔍 Running analyzer...")
-        FETCH_STATUS["message"] = "Analyzing records and updating dashboard..."
-        alerts = analyzer.analyze_all_symbols(watchlist)
-        print(f"  🔔 Analyzer completed. {len(alerts)} alerts triggered this poll.")
-        
         # Check if we should run EOD retrospective (after 3:30 PM)
         now = datetime.now()
         current_date_str = now.strftime("%Y-%m-%d")
@@ -599,12 +603,17 @@ def _poll_and_save_impl(watchlist, force=False):
                 if config.get("enable_eod_retrospective", True):
                     print(f"  🔍 EOD Market Closed. Running EOD Retrospective for {current_date_str}...")
                     FETCH_STATUS["message"] = "Running EOD Retrospective..."
-                    analyzer.run_eod_retrospective(current_date_str)
-                    LAST_EOD_RUN_DATE = current_date_str
-                    # Re-generate the dashboard so EOD stats show up
-                    analyzer.generate_dashboard(watchlist)
+                    try:
+                        analyzer.run_eod_retrospective(current_date_str)
+                        LAST_EOD_RUN_DATE = current_date_str
+                    except Exception as e_retro:
+                        print(f"  ⚠️ Error running EOD Retrospective: {e_retro}")
                 else:
                     print("  💤 EOD Market Closed, but EOD Retrospective is disabled in config. Skipping retrospective run.")
+        
+        # Trigger UI update
+        print("  📡 Notifying Dashboard Generator thread of new records...")
+        DATA_UPDATED_EVENT.set()
     else:
         print("  ⚠️ No valid records to save.")
         FETCH_STATUS["message"] = "No valid records retrieved."
@@ -613,24 +622,36 @@ def _poll_and_save_impl(watchlist, force=False):
     FETCH_STATUS["progress"] = len(watchlist)
     FETCH_STATUS["message"] = "Completed successfully"
 
-def main():
-    print("==========================================================")
-    print("🚀 F&O MACD MOMENTUM TRACKER DAEMON")
-    print("==========================================================")
-    
-    db_manager.init_db()
-    update_logging_level()
-    
+def run_dashboard_generator_loop():
     global WATCHLIST
-    WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
-    watchlist = WATCHLIST
-    if not watchlist:
-        print("Fatal: Could not initialize F&O symbols watchlist.")
-        sys.exit(1)
+    print("🖥️ Dashboard Generator thread started.")
+    
+    # Run once at startup to populate initial HTML from current DB
+    try:
+        print("🖥️ Initializing dashboard pre-render...")
+        with DB_WRITE_LOCK:
+            analyzer.analyze_all_symbols(WATCHLIST)
+        print("🖥️ Dashboard pre-render complete.")
+    except Exception as e:
+        print(f"Error in initial dashboard generation: {e}")
         
-    # Start web server thread
-    web_thread = threading.Thread(target=run_web_server, daemon=True)
-    web_thread.start()
+    while True:
+        try:
+            # Wait for data update notification
+            DATA_UPDATED_EVENT.wait()
+            DATA_UPDATED_EVENT.clear()
+            
+            print("🖥️ New data detected. Regenerating dashboard UI...")
+            with DB_WRITE_LOCK:
+                analyzer.analyze_all_symbols(WATCHLIST)
+            print("🖥️ Dashboard UI updated successfully.")
+        except Exception as e:
+            print(f"Error in dashboard generator loop: {e}")
+            time.sleep(5)
+
+def run_scheduler_loop():
+    global WATCHLIST
+    watchlist = WATCHLIST
     
     # Initialize OI cache on startup
     refresh_oi_cache()
@@ -639,20 +660,19 @@ def main():
     interval_seconds = config.get("poll_interval_minutes", 2.0) * 60
     
     print(f"Configured poll interval: {config.get('poll_interval_minutes')} minutes ({interval_seconds} seconds)")
-    print("Press Ctrl+C to stop the daemon.\n")
     
     # Run EOD retrospective recovery on startup
-    config = load_config()
     if config.get("enable_eod_retrospective", True):
         print("  🔍 Checking for missing EOD retrospectives on startup...")
         try:
-            analyzer.run_eod_retrospective()  # Scans last 30 days and catches up on missing evaluations
-            analyzer.generate_dashboard(watchlist)
+            with DB_WRITE_LOCK:
+                analyzer.run_eod_retrospective()  # Scans last 30 days and catches up on missing evaluations
+            DATA_UPDATED_EVENT.set()
         except Exception as e:
             print(f"  ⚠️ Error running startup retrospectives: {e}")
     else:
         print("💤 EOD Retrospective is disabled in config. Skipping startup retrospective checks.")
-        analyzer.generate_dashboard(watchlist)
+        DATA_UPDATED_EVENT.set()
         
     if config.get("tracking_active", True):
         poll_and_save(watchlist)
@@ -670,12 +690,39 @@ def main():
                 poll_and_save(watchlist)
             else:
                 print("💤 Tracking is currently stopped (inactive in config). Skipping scheduled poll.")
-        except KeyboardInterrupt:
-            print("\nStopping MACD Momentum Tracker Daemon...")
-            sys.exit(0)
         except Exception as e:
             print(f"Error in tracking loop: {e}")
             time.sleep(10)
+
+def main():
+    print("==========================================================")
+    print("🚀 F&O MACD MOMENTUM TRACKER DAEMON")
+    print("==========================================================")
+    
+    db_manager.init_db()
+    update_logging_level()
+    
+    global WATCHLIST
+    WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
+    watchlist = WATCHLIST
+    if not watchlist:
+        print("Fatal: Could not initialize F&O symbols watchlist.")
+        sys.exit(1)
+        
+    # Start dashboard generator loop in a background thread
+    generator_thread = threading.Thread(target=run_dashboard_generator_loop, daemon=True)
+    generator_thread.start()
+    print("🖥️ Dashboard Generator running in background thread.")
+        
+    # Start scheduler loop in a background thread
+    scheduler_thread = threading.Thread(target=run_scheduler_loop, daemon=True)
+    scheduler_thread.start()
+    print("⏰ Periodic Scheduler running in background thread.")
+    
+    print("Press Ctrl+C to stop the daemon.\n")
+    
+    # Run the web server on the main thread (blocks here)
+    run_web_server()
 
 if __name__ == "__main__":
     main()

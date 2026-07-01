@@ -16,22 +16,142 @@ DASHBOARD_PATH = os.path.join(BASE_DIR, "alerts_dashboard.html")
 
 TRACKER_LOG_PATH = os.path.join(BASE_DIR, "tracker.log")
 
+def tail_file(filepath, lines_count=200):
+    """
+    Reads the last `lines_count` lines of a file efficiently without loading the whole file into memory.
+    """
+    if not os.path.exists(filepath):
+        return []
+    
+    block_size = 4096
+    try:
+        with open(filepath, 'rb') as f:
+            f.seek(0, os.SEEK_END)
+            file_size = f.tell()
+            
+            data = []
+            lines_found = 0
+            
+            while file_size > 0 and lines_found < lines_count + 1:
+                if file_size - block_size > 0:
+                    f.seek(file_size - block_size)
+                    chunk = f.read(block_size)
+                    file_size -= block_size
+                else:
+                    f.seek(0)
+                    chunk = f.read(file_size)
+                    file_size = 0
+                    
+                data.insert(0, chunk)
+                lines_found += chunk.count(b'\n')
+                
+            combined = b''.join(data)
+            lines = combined.splitlines()
+            last_lines = lines[-lines_count:]
+            return [line.decode('utf-8', errors='ignore') for line in last_lines]
+    except Exception as e:
+        print(f"Error tailing file {filepath}: {e}")
+        # Fallback to readlines
+        try:
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+                return lines[-lines_count:]
+        except:
+            return []
+
 def get_latest_tracker_logs(limit=200):
     if not os.path.exists(TRACKER_LOG_PATH):
         return "No system logs found yet. Ensure the daemon has started."
     try:
-        with open(TRACKER_LOG_PATH, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()
-            return "".join(lines[-limit:])
+        lines = tail_file(TRACKER_LOG_PATH, limit)
+        return "\n".join(lines) + ("\n" if lines else "")
     except Exception as e:
         return f"Error reading logs: {e}"
 
 def load_config():
-    try:
-        with open(CONFIG_PATH, "r") as f:
-            return json.load(f)
-    except:
-        return {"momentum_threshold": 5.0, "min_macd_increase_alert": 0.2, "poll_interval_minutes": 2.0}
+    default_profiles = {
+        "BULLISH_CROSSOVER": {
+            "enabled": True,
+            "sound_type": "chirp",
+            "custom_frequencies": "523.25, 659.25, 783.99",
+            "custom_durations": "0.08, 0.08, 0.18",
+            "custom_wave": "sine"
+        },
+        "BEARISH_CROSSOVER": {
+            "enabled": True,
+            "sound_type": "warning",
+            "custom_frequencies": "392.00, 329.63, 261.63",
+            "custom_durations": "0.1, 0.1, 0.22",
+            "custom_wave": "triangle"
+        },
+        "MOMENTUM_START": {
+            "enabled": True,
+            "sound_type": "siren",
+            "custom_frequencies": "880.00, 660.00, 880.00, 660.00",
+            "custom_durations": "0.12, 0.12, 0.12, 0.22",
+            "custom_wave": "sawtooth"
+        },
+        "VOLUME_DRYUP": {
+            "enabled": True,
+            "sound_type": "double-chirp",
+            "custom_frequencies": "659.25, 783.99, 0, 659.25, 783.99",
+            "custom_durations": "0.06, 0.06, 0.04, 0.06, 0.12",
+            "custom_wave": "sine"
+        },
+        "HIGH_VOLUME": {
+            "enabled": True,
+            "sound_type": "tada",
+            "custom_frequencies": "440.00, 440.00, 554.37, 659.25",
+            "custom_durations": "0.08, 0.08, 0.1, 0.25",
+            "custom_wave": "sine"
+        },
+        "MACD_INCREASE": {
+            "enabled": False,
+            "sound_type": "beep",
+            "custom_frequencies": "523.25",
+            "custom_durations": "0.15",
+            "custom_wave": "sine"
+        },
+        "HISTOGRAM_ACCELERATING": {
+            "enabled": False,
+            "sound_type": "beep",
+            "custom_frequencies": "523.25",
+            "custom_durations": "0.15",
+            "custom_wave": "sine"
+        }
+    }
+
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH, "r") as f:
+                cfg = json.load(f)
+                # Ensure defaults for configuration keys
+                cfg.setdefault("min_volume_ratio_alert", 2.0)
+                cfg.setdefault("audio_alerts_enabled", True)
+                cfg.setdefault("audio_play_on_startup", True)
+                
+                # Merge profile defaults
+                profiles = cfg.setdefault("audio_alert_profiles", {})
+                for k, v in default_profiles.items():
+                    if k not in profiles:
+                        profiles[k] = v
+                    else:
+                        for sub_k, sub_v in v.items():
+                            profiles[k].setdefault(sub_k, sub_v)
+                return cfg
+        except Exception as e:
+            print(f"Error loading config.json: {e}")
+            
+    return {
+        "poll_interval_minutes": 2.0,
+        "database_path": "db/macd_history.db",
+        "momentum_threshold": 5.0,
+        "min_macd_increase_alert": 0.2,
+        "min_volume_ratio_alert": 2.0,
+        "audio_alerts_enabled": True,
+        "audio_play_on_startup": True,
+        "audio_alert_profiles": default_profiles
+    }
 
 def has_alert_today(symbol, alert_type):
     today = datetime.now().strftime("%Y-%m-%d")
@@ -58,13 +178,12 @@ def get_latest_alerts_from_log(limit=50):
     
     alerts = []
     try:
-        with open(ALERTS_LOG_PATH, "r") as f:
-            lines = f.readlines()
-            for line in lines[-limit:]:
-                try:
-                    alerts.append(json.loads(line.strip()))
-                except:
-                    pass
+        lines = tail_file(ALERTS_LOG_PATH, limit)
+        for line in lines:
+            try:
+                alerts.append(json.loads(line.strip()))
+            except:
+                pass
     except Exception as e:
         print(f"Error reading alerts log: {e}")
     return list(reversed(alerts))
@@ -638,6 +757,49 @@ def analyze_all_symbols(symbols):
                 with open(ALERTS_LOG_PATH, "a") as f_log:
                     f_log.write(json.dumps(dry_alert) + "\n")
                 print(f"🔔 [{dry_alert['severity']}] {symbol}: {dry_alert['message']}")
+
+        # Check High Volume Ratio Alert independently
+        if lat_vol is not None and lat_avg_vol is not None and lat_avg_vol > 0:
+            vol_ratio = lat_vol / lat_avg_vol
+            min_ratio = config.get("min_volume_ratio_alert", 2.0)
+            if vol_ratio >= min_ratio:
+                if not has_alert_today(symbol, "HIGH_VOLUME"):
+                    high_vol_alert = {
+                        "timestamp": timestamp_str,
+                        "symbol": symbol,
+                        "price": lat_price,
+                        "day_change": lat_day_change,
+                        "alert_type": "HIGH_VOLUME",
+                        "message": f"High Volume Alert (Vol: {fmt_vol(lat_vol)} vs 10d Avg: {fmt_vol(lat_avg_vol)}, Ratio: {vol_ratio:.2f}x)",
+                        "severity": "HIGH",
+                        "macd_line": lat_macd,
+                        "signal_line": lat_signal,
+                        "histogram": lat_hist,
+                        "macd_change": macd_diff,
+                        "histogram_change": hist_diff,
+                        "rsi": lat_rsi,
+                        "volume": lat_vol,
+                        "average_volume": lat_avg_vol,
+                        "total_ce_oi": lat_ce_oi,
+                        "total_pe_oi": lat_pe_oi,
+                        "pcr": lat_pcr,
+                        "futures_oi": lat_fut_oi,
+                        "futures_oi_change_pct": lat_fut_oi_chg,
+                        "rsi_30": lat_rsi_30,
+                        "rsi_60": lat_rsi_60,
+                        "macd_day": lat_macd_day,
+                        "macd_signal_day": lat_macd_signal_day,
+                        "macd_hist_day": lat_macd_hist_day,
+                        "rsi_day": lat_rsi_day,
+                        "macd_45": lat_macd_45,
+                        "macd_signal_45": lat_macd_signal_45,
+                        "macd_hist_45": lat_macd_hist_45
+                    }
+                    high_vol_alert = apply_adaptive_filter(high_vol_alert, config)
+                    alerts_triggered.append(high_vol_alert)
+                    with open(ALERTS_LOG_PATH, "a") as f_log:
+                        f_log.write(json.dumps(high_vol_alert) + "\n")
+                    print(f"🔔 [{high_vol_alert['severity']}] {symbol}: {high_vol_alert['message']}")
             
     conn.close()
     
@@ -843,6 +1005,18 @@ def run_eod_retrospective(date_str=None, force=False):
                     status = "NEUTRAL"
                     reason = "Price remained compressed (Breakout pending)"
                     
+            elif alert_type == "HIGH_VOLUME":
+                # High volume breakout: check for positive close change
+                if pct_change >= 0.8:
+                    status = "SUCCESS"
+                    reason = f"⚡ High volume breakout succeeded (Price change {pct_change:.2f}%)"
+                elif pct_change <= -0.5:
+                    status = "FAILED"
+                    reason = f"🔴 Fake breakout / reversal (Price fell {pct_change:.2f}%)"
+                else:
+                    status = "NEUTRAL"
+                    reason = f"Consolidated within standard range (Price change {pct_change:.2f}%)"
+                    
             eval_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             retros_to_insert.append((
                 alert_time,
@@ -888,6 +1062,68 @@ def run_eod_retrospective(date_str=None, force=False):
 
 def generate_dashboard(symbols):
     config = load_config()
+    alert_types_meta = [
+        ("BULLISH_CROSSOVER", "🐂 Bullish Crossover"),
+        ("BEARISH_CROSSOVER", "🐻 Bearish Crossover"),
+        ("MOMENTUM_START", "🔥 Momentum Start (Critical)"),
+        ("VOLUME_DRYUP", "💧 Volume Dry-up"),
+        ("HIGH_VOLUME", "📊 High Volume Alert"),
+        ("MACD_INCREASE", "📈 MACD Line Increase"),
+        ("HISTOGRAM_ACCELERATING", "🚀 Histogram Acceleration")
+    ]
+    
+    sound_cards_html = ""
+    for atype, display in alert_types_meta:
+        sound_cards_html += f"""
+        <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <label style="font-weight: bold; color: #fff; display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px;">
+                    <input type="checkbox" id="cfg-sound-enabled-{atype}" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);"> {display}
+                </label>
+                <button onclick="testTone('{atype}')" class="btn-reset-filters" style="padding: 4px 10px; font-size: 11px;">⚡ Test Tone</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+                <div class="form-group" style="margin-bottom: 4px;">
+                    <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 4px;">Sound Preset / Alert Tone</label>
+                    <select id="sound-type-{atype}" onchange="toggleCustomSoundInputs('{atype}')" style="width: 100%; max-width: 100%; background:#1e293b; color:#fff; border:1px solid var(--border); border-radius:6px; padding:6px; font-size:12px; outline:none;">
+                        <option value="chirp">Chirp (Ascending)</option>
+                        <option value="warning">Warning Buzz (Descending)</option>
+                        <option value="siren">Siren (Alert)</option>
+                        <option value="double-chirp">Double Chirp</option>
+                        <option value="tada">Tada Fanfare</option>
+                        <option value="bell">Bell Chime</option>
+                        <option value="beep">Simple Beep</option>
+                        <option value="beep-low">Low Beep</option>
+                        <option value="double-beep">Double Beep</option>
+                        <option value="buzz">Low Buzz</option>
+                        <option value="custom">🛠️ Custom Notes</option>
+                        <option value="none">Disabled</option>
+                    </select>
+                </div>
+                <div id="custom-fields-{atype}" style="display: none; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px; border: 1px dashed var(--border);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Frequencies (Hz, csv)</label>
+                            <input type="text" id="sound-freq-{atype}" placeholder="523.25, 659.25" style="width: 100%; font-size:11px; padding:4px 6px; background:#0f172a; border:1px solid var(--border); color:#fff; border-radius:4px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Durations (sec, csv)</label>
+                            <input type="text" id="sound-dur-{atype}" placeholder="0.1, 0.15" style="width: 100%; font-size:11px; padding:4px 6px; background:#0f172a; border:1px solid var(--border); color:#fff; border-radius:4px;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Waveform</label>
+                            <select id="sound-wave-{atype}" style="width: 100%; background:#0f172a; color:#fff; border:1px solid var(--border); border-radius:4px; padding:4px; font-size:11px; outline:none;">
+                                <option value="sine">sine (pure)</option>
+                                <option value="triangle">triangle (soft)</option>
+                                <option value="sawtooth">sawtooth (buzz)</option>
+                                <option value="square">square (retro)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """
     db_path = os.path.join(BASE_DIR, "db/macd_history.db")
     
     if not os.path.exists(db_path):
@@ -1909,6 +2145,7 @@ def generate_dashboard(symbols):
                     <button id="btn-start" onclick="setTrackingActive(true)" class="btn-fetch" style="background: #10b981; border: none; font-weight: bold; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">▶ Start</button>
                     <button id="btn-stop" onclick="setTrackingActive(false)" class="btn-fetch" style="background: #ef4444; border: none; font-weight: bold; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);">⏸ Stop</button>
                 </div>
+                <button id="btn-audio-toggle" onclick="toggleAudioMuteState()" class="btn-fetch" style="background: #3b82f6; border: none; font-weight: bold; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">🔊 Sound Enabled</button>
                 <button id="btn-force-fetch" onclick="triggerForceFetch()" class="btn-fetch">⚡ Force Fetch TV Data</button>
             </div>
         </div>
@@ -2238,6 +2475,11 @@ def generate_dashboard(symbols):
                 <label for="inp-increase">📈 Alert Trigger MACD Increase (Minimum Change)</label>
                 <input type="number" step="0.05" id="inp-increase">
             </div>
+
+            <div class="form-group">
+                <label for="inp-vol-ratio">📊 Volume Ratio Alert Threshold (e.g. 2.0x average)</label>
+                <input type="number" step="0.1" min="0.1" id="inp-vol-ratio">
+            </div>
             
             <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 16px; margin-bottom: 12px;">
                 <input type="checkbox" id="cfg-enable-ai" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
@@ -2250,6 +2492,30 @@ def generate_dashboard(symbols):
             </div>
             
             <button class="btn-submit" onclick="saveConfig()">💾 Save Configuration</button>
+        </div>
+
+        <div class="card" style="max-width: 600px; margin: 24px auto 0 auto;">
+            <h2>🔊 Audible Alerts Settings</h2>
+            <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
+                Enable sound alerts and customize how they beep for different indicators.
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+                <input type="checkbox" id="cfg-audio-enabled" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
+                <label for="cfg-audio-enabled" style="margin-bottom: 0; cursor: pointer; font-weight: bold; color: #fff;">🔊 Enable Sound Alerts in Dashboard</label>
+            </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <input type="checkbox" id="cfg-audio-startup" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
+                <label for="cfg-audio-startup" style="margin-bottom: 0; cursor: pointer; color: var(--text-main);">🎵 Play Startup Chime on Dashboard Load</label>
+            </div>
+
+            <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+                <h3 style="font-size: 14px; color: #fff; margin-bottom: 12px; font-family: 'Outfit', sans-serif;">Customize Signal Tones</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    {sound_cards_html}
+                </div>
+            </div>
         </div>
         
         <div class="card" style="max-width: 800px; margin: 24px auto 0 auto;">
@@ -2434,6 +2700,9 @@ def generate_dashboard(symbols):
                 }}
                 
                 console.log("⚡ Dashboard seamlessly updated!");
+                if (typeof checkForNewAlerts === 'function') {{
+                    checkForNewAlerts();
+                }}
             }} catch (err) {{
                 console.error("Error doing seamless update:", err);
             }}
@@ -2845,6 +3114,14 @@ def generate_dashboard(symbols):
             }}
         }}
 
+        function toggleCustomSoundInputs(alertType) {{
+            const select = document.getElementById('sound-type-' + alertType);
+            const customDiv = document.getElementById('custom-fields-' + alertType);
+            if (select && customDiv) {{
+                customDiv.style.display = select.value === 'custom' ? 'block' : 'none';
+            }}
+        }}
+
         async function loadConfig() {{
             try {{
                 const r = await fetch(getApiUrl('/config'));
@@ -2853,6 +3130,38 @@ def generate_dashboard(symbols):
                     document.getElementById('inp-interval').value = cfg.poll_interval_minutes;
                     document.getElementById('inp-momentum').value = cfg.momentum_threshold;
                     document.getElementById('inp-increase').value = cfg.min_macd_increase_alert;
+                    document.getElementById('inp-vol-ratio').value = cfg.min_volume_ratio_alert !== undefined ? cfg.min_volume_ratio_alert : 2.0;
+                    
+                    document.getElementById('cfg-audio-enabled').checked = cfg.audio_alerts_enabled !== false;
+                    document.getElementById('cfg-audio-startup').checked = cfg.audio_play_on_startup !== false;
+                    
+                    const profiles = cfg.audio_alert_profiles || {{}};
+                    const alertTypes = [
+                        "BULLISH_CROSSOVER", "BEARISH_CROSSOVER", "MOMENTUM_START", 
+                        "VOLUME_DRYUP", "HIGH_VOLUME", "MACD_INCREASE", "HISTOGRAM_ACCELERATING"
+                    ];
+                    
+                    alertTypes.forEach(atype => {{
+                        const prof = profiles[atype] || {{}};
+                        const enabledCb = document.getElementById('cfg-sound-enabled-' + atype);
+                        if (enabledCb) enabledCb.checked = prof.enabled !== false;
+                        
+                        const typeSelect = document.getElementById('sound-type-' + atype);
+                        if (typeSelect) {{
+                            typeSelect.value = prof.sound_type || 'beep';
+                            toggleCustomSoundInputs(atype);
+                        }}
+                        
+                        const freqInput = document.getElementById('sound-freq-' + atype);
+                        if (freqInput) freqInput.value = prof.custom_frequencies || '';
+                        
+                        const durInput = document.getElementById('sound-dur-' + atype);
+                        if (durInput) durInput.value = prof.custom_durations || '';
+                        
+                        const waveSelect = document.getElementById('sound-wave-' + atype);
+                        if (waveSelect) waveSelect.value = prof.custom_wave || 'sine';
+                    }});
+                    
                     document.getElementById('cfg-enable-ai').checked = cfg.enable_adaptive_ai_filters || false;
                     document.getElementById('cfg-enable-retro').checked = cfg.enable_eod_retrospective !== false;
                     
@@ -2873,10 +3182,31 @@ def generate_dashboard(symbols):
         }}
         
         async function saveConfig() {{
+            const alertTypes = [
+                "BULLISH_CROSSOVER", "BEARISH_CROSSOVER", "MOMENTUM_START", 
+                "VOLUME_DRYUP", "HIGH_VOLUME", "MACD_INCREASE", "HISTOGRAM_ACCELERATING"
+            ];
+            const profiles = {{}};
+            alertTypes.forEach(atype => {{
+                profiles[atype] = {{
+                    enabled: document.getElementById('cfg-sound-enabled-' + atype).checked,
+                    sound_type: document.getElementById('sound-type-' + atype).value,
+                    custom_frequencies: document.getElementById('sound-freq-' + atype).value,
+                    custom_durations: document.getElementById('sound-dur-' + atype).value,
+                    custom_wave: document.getElementById('sound-wave-' + atype).value
+                }};
+            }});
+
             const payload = {{
                 poll_interval_minutes: parseFloat(document.getElementById('inp-interval').value),
                 momentum_threshold: parseFloat(document.getElementById('inp-momentum').value),
                 min_macd_increase_alert: parseFloat(document.getElementById('inp-increase').value),
+                min_volume_ratio_alert: parseFloat(document.getElementById('inp-vol-ratio').value),
+                
+                audio_alerts_enabled: document.getElementById('cfg-audio-enabled').checked,
+                audio_play_on_startup: document.getElementById('cfg-audio-startup').checked,
+                audio_alert_profiles: profiles,
+                
                 enable_adaptive_ai_filters: document.getElementById('cfg-enable-ai').checked,
                 enable_eod_retrospective: document.getElementById('cfg-enable-retro').checked,
                 logging_enabled: document.getElementById('cfg-enable-logging') ? document.getElementById('cfg-enable-logging').checked : true
@@ -2889,7 +3219,8 @@ def generate_dashboard(symbols):
                     body: JSON.stringify(payload)
                 }});
                 if (r.ok) {{
-                    showToast("Settings saved successfully! Interval will update on next check.", false);
+                    showToast("Settings saved successfully! Config updated.", false);
+                    setTimeout(() => location.reload(), 1000);
                 }} else {{
                     showToast("Error saving settings.", true);
                 }}
@@ -3356,7 +3687,285 @@ def generate_dashboard(symbols):
             }}
         }}
 
+        // ── Web Audio API Client Engine ──────────────────────────────────────
+        let playedAlerts = new Set();
+        let systemConfig = null;
+
+        async function fetchSystemConfigAndInit() {{
+            try {{
+                const r = await fetch(getApiUrl('/config'));
+                if (r.ok) {{
+                    systemConfig = await r.json();
+                    updateAudioToggleButtonUI();
+                    
+                    const rawDiv = document.getElementById('raw-alerts-json');
+                    if (rawDiv && rawDiv.textContent.trim()) {{
+                        try {{
+                            const alerts = JSON.parse(rawDiv.textContent);
+                            alerts.forEach(a => {{
+                                const sig = a.timestamp + '_' + a.symbol + '_' + a.alert_type;
+                                playedAlerts.add(sig);
+                            }});
+                        }} catch(e) {{
+                            console.error("Error parsing initial alerts:", e);
+                        }}
+                    }}
+                    
+                    if (systemConfig.audio_alerts_enabled && systemConfig.audio_play_on_startup && getLocalAudioEnabled()) {{
+                        setTimeout(() => {{
+                            playAudioPattern('startup');
+                        }}, 800);
+                    }}
+                }}
+            }} catch (e) {{
+                console.error("Error loading config for audio:", e);
+            }}
+        }}
+
+        function getLocalAudioEnabled() {{
+            return localStorage.getItem('localAudioEnabled') !== 'false';
+        }}
+
+        function setLocalAudioEnabled(val) {{
+            localStorage.setItem('localAudioEnabled', val ? 'true' : 'false');
+            updateAudioToggleButtonUI();
+        }}
+
+        function updateAudioToggleButtonUI() {{
+            const btn = document.getElementById('btn-audio-toggle');
+            if (!btn) return;
+            const localEnabled = getLocalAudioEnabled();
+            const globalEnabled = systemConfig ? systemConfig.audio_alerts_enabled : true;
+            
+            if (!globalEnabled) {{
+                btn.innerHTML = '🔇 Sound Disabled Globally';
+                btn.style.background = '#dc2626';
+                btn.style.boxShadow = 'none';
+                btn.disabled = true;
+            }} else if (localEnabled) {{
+                btn.innerHTML = '🔊 Sound Enabled';
+                btn.style.background = '#3b82f6';
+                btn.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
+                btn.disabled = false;
+            }} else {{
+                btn.innerHTML = '🔇 Sound Muted';
+                btn.style.background = '#6b7280';
+                btn.style.boxShadow = 'none';
+                btn.disabled = false;
+            }}
+        }}
+
+        function toggleAudioMuteState() {{
+            const nextVal = !getLocalAudioEnabled();
+            setLocalAudioEnabled(nextVal);
+            if (nextVal) {{
+                playAudioPattern('beep');
+            }}
+        }}
+
+        let audioCtx = null;
+        function getAudioContext() {{
+            if (!audioCtx) {{
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }}
+            if (audioCtx.state === 'suspended') {{
+                audioCtx.resume();
+            }}
+            return audioCtx;
+        }}
+
+        function playTone(freq, type, duration, startTime, volume = 0.15) {{
+            const ctx = getAudioContext();
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, startTime);
+            
+            gainNode.gain.setValueAtTime(volume, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration - 0.02);
+            
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        }}
+
+        const SOUND_PATTERNS = {{
+            startup: [
+                {{ freq: 261.63, type: 'sine', duration: 0.12 }},
+                {{ freq: 329.63, type: 'sine', duration: 0.12 }},
+                {{ freq: 392.00, type: 'sine', duration: 0.12 }},
+                {{ freq: 523.25, type: 'sine', duration: 0.25 }}
+            ],
+            chirp: [
+                {{ freq: 523.25, type: 'sine', duration: 0.08 }},
+                {{ freq: 659.25, type: 'sine', duration: 0.08 }},
+                {{ freq: 783.99, type: 'sine', duration: 0.18 }}
+            ],
+            warning: [
+                {{ freq: 392.00, type: 'triangle', duration: 0.1 }},
+                {{ freq: 329.63, type: 'triangle', duration: 0.1 }},
+                {{ freq: 261.63, type: 'sawtooth', duration: 0.22 }}
+            ],
+            siren: [
+                {{ freq: 880.00, type: 'sawtooth', duration: 0.12 }},
+                {{ freq: 660.00, type: 'sawtooth', duration: 0.12 }},
+                {{ freq: 880.00, type: 'sawtooth', duration: 0.12 }},
+                {{ freq: 660.00, type: 'sawtooth', duration: 0.22 }}
+            ],
+            'double-chirp': [
+                {{ freq: 659.25, type: 'sine', duration: 0.06 }},
+                {{ freq: 783.99, type: 'sine', duration: 0.06 }},
+                {{ freq: 0, type: 'sine', duration: 0.04 }},
+                {{ freq: 659.25, type: 'sine', duration: 0.06 }},
+                {{ freq: 783.99, type: 'sine', duration: 0.12 }}
+            ],
+            tada: [
+                {{ freq: 440.00, type: 'sine', duration: 0.08 }},
+                {{ freq: 440.00, type: 'sine', duration: 0.08 }},
+                {{ freq: 554.37, type: 'sine', duration: 0.1 }},
+                {{ freq: 659.25, type: 'sine', duration: 0.25 }}
+            ],
+            bell: [
+                {{ freq: 987.77, type: 'sine', duration: 0.12 }},
+                {{ freq: 783.99, type: 'sine', duration: 0.25 }}
+            ],
+            beep: [
+                {{ freq: 523.25, type: 'sine', duration: 0.15 }}
+            ],
+            'beep-low': [
+                {{ freq: 261.63, type: 'sine', duration: 0.15 }}
+            ],
+            'double-beep': [
+                {{ freq: 523.25, type: 'sine', duration: 0.08 }},
+                {{ freq: 0, type: 'sine', duration: 0.04 }},
+                {{ freq: 523.25, type: 'sine', duration: 0.12 }}
+            ],
+            buzz: [
+                {{ freq: 196.00, type: 'sawtooth', duration: 0.25 }}
+            ]
+        }};
+
+        function playAudioPattern(patternName) {{
+            try {{
+                const pattern = SOUND_PATTERNS[patternName];
+                if (!pattern) return;
+                const ctx = getAudioContext();
+                let time = ctx.currentTime;
+                pattern.forEach(note => {{
+                    if (note.freq > 0) {{
+                        playTone(note.freq, note.type, note.duration, time);
+                    }}
+                    time += note.duration;
+                }});
+            }} catch (e) {{
+                console.error("Audio playback error:", e);
+                const btn = document.getElementById('btn-audio-toggle');
+                if (btn) {{
+                    btn.innerHTML = '⚠️ Click to Enable Sound';
+                    btn.style.background = '#f59e0b';
+                }}
+            }}
+        }}
+
+        function playCustomNotes(freqStr, durStr, waveType) {{
+            try {{
+                const freqs = freqStr.split(',').map(f => parseFloat(f.trim())).filter(f => !isNaN(f));
+                const durs = durStr.split(',').map(d => parseFloat(d.trim())).filter(d => !isNaN(d));
+                
+                if (freqs.length === 0 || durs.length === 0) return;
+                
+                const ctx = getAudioContext();
+                let time = ctx.currentTime;
+                
+                for (let i = 0; i < freqs.length; i++) {{
+                    const freq = freqs[i];
+                    const dur = durs[i] !== undefined ? durs[i] : (durs[durs.length - 1] || 0.15);
+                    if (freq > 0) {{
+                        playTone(freq, waveType, dur, time);
+                    }}
+                    time += dur;
+                }}
+            }} catch(e) {{
+                console.error("Error playing custom tone:", e);
+            }}
+        }}
+
+        function testTone(alertType) {{
+            const typeSelect = document.getElementById('sound-type-' + alertType);
+            if (!typeSelect) return;
+            const soundType = typeSelect.value;
+            
+            if (soundType === 'none') return;
+            
+            if (soundType === 'custom') {{
+                const freqStr = document.getElementById('sound-freq-' + alertType).value;
+                const durStr = document.getElementById('sound-dur-' + alertType).value;
+                const waveType = document.getElementById('sound-wave-' + alertType).value;
+                playCustomNotes(freqStr, durStr, waveType);
+            }} else {{
+                playAudioPattern(soundType);
+            }}
+        }}
+
+        function checkForNewAlerts() {{
+            const rawDiv = document.getElementById('raw-alerts-json');
+            if (!rawDiv || !rawDiv.textContent.trim()) return;
+            
+            try {{
+                const alerts = JSON.parse(rawDiv.textContent);
+                let alertsToPlay = [];
+                
+                alerts.forEach(a => {{
+                    const sig = a.timestamp + '_' + a.symbol + '_' + a.alert_type;
+                    if (!playedAlerts.has(sig)) {{
+                        playedAlerts.add(sig);
+                        alertsToPlay.push(a);
+                    }}
+                }});
+                
+                if (alertsToPlay.length > 0 && getLocalAudioEnabled() && systemConfig && systemConfig.audio_alerts_enabled) {{
+                    let highestAlert = null;
+                    const priorityMap = {{
+                        'MOMENTUM_START': 10,
+                        'HIGH_VOLUME': 9,
+                        'BULLISH_CROSSOVER': 8,
+                        'BEARISH_CROSSOVER': 8,
+                        'VOLUME_DRYUP': 7,
+                        'MACD_INCREASE': 6,
+                        'HISTOGRAM_ACCELERATING': 6
+                    }};
+                    
+                    alertsToPlay.forEach(a => {{
+                        if (!highestAlert || (priorityMap[a.alert_type] || 0) > (priorityMap[highestAlert.alert_type] || 0)) {{
+                            highestAlert = a;
+                        }}
+                    }});
+                    
+                    if (highestAlert) {{
+                        const profiles = systemConfig.audio_alert_profiles || {{}};
+                        const profile = profiles[highestAlert.alert_type] || {{}};
+                        
+                        if (profile.enabled !== false) {{
+                            const soundType = profile.sound_type || 'beep';
+                            if (soundType === 'custom') {{
+                                playCustomNotes(profile.custom_frequencies || '', profile.custom_durations || '', profile.custom_wave || 'sine');
+                            }} else if (soundType !== 'none') {{
+                                playAudioPattern(soundType);
+                            }}
+                            showToast(`🔊 Audible Alert: ${{highestAlert.alert_type}} for ${{highestAlert.symbol}}`, false);
+                        }}
+                    }}
+                }}
+            }} catch (e) {{
+                console.error("Error checking alerts:", e);
+            }}
+        }}
+
         loadConfig();
+        fetchSystemConfigAndInit();
         setTimeout(restoreFilters, 100);
         setTimeout(reapplySorting, 150);
         setTimeout(renderFocusAlerts, 160);

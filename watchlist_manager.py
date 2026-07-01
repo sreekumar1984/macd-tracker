@@ -30,6 +30,8 @@ def fetch_and_initialize_fo_list():
                     name = row[name_idx].strip()
                     
                     if exchange == "NFO" and inst_type == "FUT" and name:
+                        if name == "NIFTYNXT50":
+                            continue
                         # Format for TradingView (replace hyphens with underscores)
                         formatted_name = name.replace("-", "_")
                         symbols.add(f"NSE:{formatted_name}")

@@ -3,8 +3,62 @@
   "database_path": "db/macd_history.db",
   "momentum_threshold": 4.5,
   "min_macd_increase_alert": 0.2,
+  "min_volume_ratio_alert": 200,
+  "audio_alerts_enabled": true,
+  "audio_play_on_startup": true,
+  "audio_alert_profiles": {
+    "BULLISH_CROSSOVER": {
+      "enabled": false,
+      "sound_type": "chirp",
+      "custom_frequencies": "523.25, 659.25, 783.99",
+      "custom_durations": "0.08, 0.08, 0.18",
+      "custom_wave": "sine"
+    },
+    "BEARISH_CROSSOVER": {
+      "enabled": false,
+      "sound_type": "warning",
+      "custom_frequencies": "392.00, 329.63, 261.63",
+      "custom_durations": "0.1, 0.1, 0.22",
+      "custom_wave": "triangle"
+    },
+    "MOMENTUM_START": {
+      "enabled": true,
+      "sound_type": "siren",
+      "custom_frequencies": "880.00, 660.00, 880.00, 660.00",
+      "custom_durations": "0.12, 0.12, 0.12, 0.22",
+      "custom_wave": "sawtooth"
+    },
+    "VOLUME_DRYUP": {
+      "enabled": false,
+      "sound_type": "double-chirp",
+      "custom_frequencies": "659.25, 783.99, 0, 659.25, 783.99",
+      "custom_durations": "0.06, 0.06, 0.04, 0.06, 0.12",
+      "custom_wave": "sine"
+    },
+    "HIGH_VOLUME": {
+      "enabled": true,
+      "sound_type": "tada",
+      "custom_frequencies": "440.00, 440.00, 554.37, 659.25",
+      "custom_durations": "0.08, 0.08, 0.1, 0.25",
+      "custom_wave": "sine"
+    },
+    "MACD_INCREASE": {
+      "enabled": false,
+      "sound_type": "beep",
+      "custom_frequencies": "523.25",
+      "custom_durations": "0.15",
+      "custom_wave": "sine"
+    },
+    "HISTOGRAM_ACCELERATING": {
+      "enabled": false,
+      "sound_type": "beep",
+      "custom_frequencies": "523.25",
+      "custom_durations": "0.15",
+      "custom_wave": "sine"
+    }
+  },
   "logging_enabled": true,
   "enable_eod_retrospective": true,
   "enable_adaptive_ai_filters": true,
-  "tracking_active": false
+  "tracking_active": true
 }
