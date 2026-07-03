@@ -1598,6 +1598,7 @@ def generate_dashboard(symbols):
         
     # Build HTML rows for all symbols snapshot
     snapshot_rows = ""
+    buildup_rows = ""
     dryup_list = []
     for s_info in latest_snapshot:
         sym, rows = s_info
@@ -1803,6 +1804,38 @@ def generate_dashboard(symbols):
             <td class="col-vol">{fmt_vol(s_vol)}</td>
             <td class="col-avg_vol">{fmt_vol(s_avg_vol)}</td>
             <td class="col-ratio" style="{vol_ratio_style}">{vol_ratio_str}</td>
+            <td class="col-pcr" style="{pcr_style}">{pcr_str}</td>
+            <td class="col-fut_oi">{fut_oi_str}</td>
+            <td class="col-oi_chg" style="{oi_chg_style}">{oi_chg_str}</td>
+            <td class="col-macd_day" style="color: {macd_day_color}; font-weight: bold;">{f"{s_macd_day:.3f}" if s_macd_day is not None else "—"}</td>
+            <td class="col-signal_day">{f"{s_macd_sig_day:.3f}" if s_macd_sig_day is not None else "—"}</td>
+            <td class="col-hist_day" style="color: {hist_day_color}; font-weight: bold;">{f"{s_macd_hist_day:+.3f}" if s_macd_hist_day is not None else "—"}</td>
+            <td class="col-rsi_day">{f"{s_rsi_day:.2f}" if s_rsi_day is not None else "—"}</td>
+            <td class="col-interp" style="{interp_style}">{interp}</td>
+        </tr>
+        """
+        
+        ratio_val = (s_vol / s_avg_vol) * 100 if s_vol is not None and s_avg_vol is not None and s_avg_vol > 0 else 0.0
+        day_chg_val = s_day_chg if s_day_chg is not None else 0.0
+        
+        buildup_rows += f"""
+        <tr class="buildup-row" data-ratio="{ratio_val:.2f}" data-change="{day_chg_val:.2f}">
+            <td class="col-symbol" style="font-weight: bold; color: #fff;">{sym}</td>
+            <td class="col-price">₹{s_price:.2f}</td>
+            <td class="col-day_change" style="{day_chg_style}">{day_chg_str}</td>
+            <td class="col-ratio" style="{vol_ratio_style}">{vol_ratio_str}</td>
+            <td class="col-vol">{fmt_vol(s_vol)}</td>
+            <td class="col-avg_vol">{fmt_vol(s_avg_vol)}</td>
+            <td class="col-macd_15" style="color: {macd_color}; font-weight: bold;">{f"{s_macd:.3f}" if s_macd is not None else "—"}</td>
+            <td class="col-signal_15">{f"{s_sig:.3f}" if s_sig is not None else "—"}</td>
+            <td class="col-hist_15" style="color: {hist_color}; font-weight: bold;">{f"{s_hist:+.3f}" if s_hist is not None else "—"}</td>
+            <td class="col-macd_45" style="color: {macd_45_color}; font-weight: bold;">{f"{s_macd_45:.3f}" if s_macd_45 is not None else "—"}</td>
+            <td class="col-signal_45">{f"{s_sig_45:.3f}" if s_sig_45 is not None else "—"}</td>
+            <td class="col-hist_45" style="color: {hist_45_color}; font-weight: bold;">{f"{s_hist_45:+.3f}" if s_hist_45 is not None else "—"}</td>
+            <td class="col-trend" style="{trend_style}">{trend_str}</td>
+            <td class="col-rsi_15" style="{rsi_style}">{rsi_str}</td>
+            <td class="col-rsi_30">{f"{s_rsi_30:.2f}" if s_rsi_30 is not None else "—"}</td>
+            <td class="col-rsi_60">{f"{s_rsi_60:.2f}" if s_rsi_60 is not None else "—"}</td>
             <td class="col-pcr" style="{pcr_style}">{pcr_str}</td>
             <td class="col-fut_oi">{fut_oi_str}</td>
             <td class="col-oi_chg" style="{oi_chg_style}">{oi_chg_str}</td>
@@ -2160,6 +2193,7 @@ def generate_dashboard(symbols):
     <div class="tabs-header">
         <button id="btn-tab-dashboard" class="tab-btn active" onclick="switchTab('dashboard')">📊 Live Dashboard</button>
         <button id="btn-tab-dryup" class="tab-btn" onclick="switchTab('dryup')">💧 Volume Dry-up</button>
+        <button id="btn-tab-buildup" class="tab-btn" onclick="switchTab('buildup')">🚀 Volume Radar</button>
         <button id="btn-tab-focus" class="tab-btn" onclick="switchTab('focus')">⭐ Focus Panel</button>
         <button id="btn-tab-retro" class="tab-btn" onclick="switchTab('retro')">🔍 EOD Retrospection</button>
         <button id="btn-tab-ai" class="tab-btn" onclick="switchTab('ai')">🤖 AI Optimizer</button>
@@ -2351,6 +2385,80 @@ def generate_dashboard(symbols):
                         </thead>
                         <tbody id="dryup-table-body">
                             {dryup_rows or '<tr><td colspan="20" style="text-align:center; padding: 30px; color: var(--text-muted);">No active volume dry-ups detected.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab: Volume Buildup Radar -->
+    <div id="tab-buildup" class="tab-content">
+        <div class="container">
+            <!-- Stats cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div class="card" style="margin-bottom: 0; padding: 16px; display: flex; align-items: center; gap: 16px;">
+                    <div style="font-size: 32px;">🚀</div>
+                    <div>
+                        <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Matching Futures</span>
+                        <span id="buildup-count-badge" style="font-size: 24px; font-weight: 800; color: #10b981; font-family: 'Outfit', sans-serif;">0</span>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Min Volume Ratio %</span>
+                    <input type="number" id="buildup-min-vol" value="80" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max Volume Ratio %</span>
+                    <input type="number" id="buildup-max-vol" value="180" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max Abs Price Change %</span>
+                    <input type="number" id="buildup-max-price-change" value="3.0" step="0.5" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
+                </div>
+            </div>
+
+            <!-- F&O Volume Buildup List Card -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="margin-bottom: 0;">🚀 Volume Accumulator (Pre-Breakout Radar)</h2>
+                    <span style="font-size: 13px; color: var(--text-muted);">
+                        Filter for stocks experiencing early volume growth with consolidated prices (Max Price Change constraint) to catch moves before breakout.
+                    </span>
+                </div>
+                
+                <div class="table-wrap" style="max-height: 600px;">
+                    <table id="buildup-table">
+                        <thead>
+                            <tr>
+                                <th class="col-symbol">Symbol</th>
+                                <th class="col-price">Price</th>
+                                <th class="col-day_change">Day Change</th>
+                                <th class="col-ratio">Vol Ratio</th>
+                                <th class="col-vol">Today's Vol</th>
+                                <th class="col-avg_vol">Avg Vol (10d)</th>
+                                <th class="col-macd_15">MACD (15m)</th>
+                                <th class="col-signal_15">Signal (15m)</th>
+                                <th class="col-hist_15">Hist (15m)</th>
+                                <th class="col-macd_45">MACD (45m)</th>
+                                <th class="col-signal_45">Signal (45m)</th>
+                                <th class="col-hist_45">Hist (45m)</th>
+                                <th class="col-trend">MACD Trend</th>
+                                <th class="col-rsi_15">RSI (15m)</th>
+                                <th class="col-rsi_30">RSI (30m)</th>
+                                <th class="col-rsi_60">RSI (60m)</th>
+                                <th class="col-pcr">PCR</th>
+                                <th class="col-fut_oi">Futures OI</th>
+                                <th class="col-oi_chg">OI Change</th>
+                                <th class="col-macd_day">MACD (1d)</th>
+                                <th class="col-signal_day">Signal (1d)</th>
+                                <th class="col-hist_day">Hist (1d)</th>
+                                <th class="col-rsi_day">RSI (1d)</th>
+                                <th class="col-interp">Signal Interpretation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buildup-table-body">
+                            {buildup_rows or '<tr><td colspan="24" style="text-align:center; padding: 30px; color: var(--text-muted);">No symbols loaded.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -2598,6 +2706,13 @@ def generate_dashboard(symbols):
                 document.getElementById('btn-tab-dryup').classList.add('active');
                 document.getElementById('tab-dryup').classList.add('active-content');
                 localStorage.setItem('activeTab', 'dryup');
+            }} else if (tabName === 'buildup') {{
+                document.getElementById('btn-tab-buildup').classList.add('active');
+                document.getElementById('tab-buildup').classList.add('active-content');
+                localStorage.setItem('activeTab', 'buildup');
+                if (typeof applyBuildupFilters === 'function') {{
+                    applyBuildupFilters();
+                }}
             }} else if (tabName === 'focus') {{
                 document.getElementById('btn-tab-focus').classList.add('active');
                 document.getElementById('tab-focus').classList.add('active-content');
@@ -2664,6 +2779,8 @@ def generate_dashboard(symbols):
                     '#alerts-log-table-body',
                     '#snapshot-table-body',
                     '#dryup-table-body',
+                    '#buildup-table-body',
+                    '#buildup-count-badge',
                     '#tab-retro',
                     '#tab-ai',
                     '#db-size-info',
@@ -2696,6 +2813,9 @@ def generate_dashboard(symbols):
                 if (typeof renderFocusAlerts === 'function') {{
                     renderFocusAlerts();
                 }}
+                if (typeof applyBuildupFilters === 'function') {{
+                    applyBuildupFilters();
+                }}
                 
                 if (activeId) {{
                     const newActiveEl = document.getElementById(activeId);
@@ -2718,7 +2838,7 @@ def generate_dashboard(symbols):
 
         setInterval(() => {{
             const currentTab = localStorage.getItem('activeTab') || 'dashboard';
-            if (currentTab === 'dashboard' || currentTab === 'dryup') {{
+            if (currentTab === 'dashboard' || currentTab === 'dryup' || currentTab === 'buildup') {{
                 updateDashboardSeamlessly();
             }}
         }}, 30000);
@@ -3972,11 +4092,41 @@ def generate_dashboard(symbols):
             }}
         }}
 
+        function applyBuildupFilters() {{
+            const minVol = parseFloat(document.getElementById('buildup-min-vol').value) || 0;
+            const maxVol = parseFloat(document.getElementById('buildup-max-vol').value) || 999999;
+            const maxPriceChange = parseFloat(document.getElementById('buildup-max-price-change').value) || 999999;
+            
+            const rows = document.querySelectorAll('.buildup-row');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {{
+                const ratio = parseFloat(row.getAttribute('data-ratio')) || 0;
+                const change = Math.abs(parseFloat(row.getAttribute('data-change')) || 0);
+                
+                const matchesVol = ratio >= minVol && ratio <= maxVol;
+                const matchesPrice = change <= maxPriceChange;
+                
+                if (matchesVol && matchesPrice) {{
+                    row.style.display = '';
+                    visibleCount++;
+                }} else {{
+                    row.style.display = 'none';
+                }}
+            }});
+            
+            const badge = document.getElementById('buildup-count-badge');
+            if (badge) {{
+                badge.innerText = visibleCount;
+            }}
+        }}
+
         loadConfig();
         fetchSystemConfigAndInit();
         setTimeout(restoreFilters, 100);
         setTimeout(reapplySorting, 150);
         setTimeout(renderFocusAlerts, 160);
+        setTimeout(applyBuildupFilters, 180);
     </script>
     <div id="raw-alerts-json" style="display:none;">{alerts_json_str}</div>
 </body>
