@@ -132,6 +132,9 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
         if parsed.path in ('/', '/dashboard', '/alerts_dashboard.html'):
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
             self.send_cors_headers()
             self.end_headers()
             dashboard_file = os.path.join(BASE_DIR, "alerts_dashboard.html")
@@ -227,9 +230,9 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                     from watchlist_manager import WATCHLIST_PATH
                     if os.path.exists(WATCHLIST_PATH):
                         with open(WATCHLIST_PATH, "r") as f:
-                            WATCHLIST = json.load(f)
+                            WATCHLIST = filter_watchlist(json.load(f))
                     else:
-                        WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
+                        WATCHLIST = filter_watchlist(watchlist_manager.fetch_and_initialize_fo_list())
                 
                 print("⚡ [Web Request] Force fetch triggered via Web Dashboard. Starting background thread...")
                 
@@ -262,9 +265,9 @@ class TrackerWebHandler(BaseHTTPRequestHandler):
                     from watchlist_manager import WATCHLIST_PATH
                     if os.path.exists(WATCHLIST_PATH):
                         with open(WATCHLIST_PATH, "r") as f:
-                            WATCHLIST = json.load(f)
+                            WATCHLIST = filter_watchlist(json.load(f))
                     else:
-                        WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
+                        WATCHLIST = filter_watchlist(watchlist_manager.fetch_and_initialize_fo_list())
                 
                 logger.info("⚡ [Web Request] Force EOD Retrospective triggered via Web Dashboard. Starting background thread...")
                 
@@ -365,6 +368,10 @@ def query_tradingview_batch(symbols):
         print(f"  ⚠️ Exception querying TradingView batch: {e}")
         return []
 
+def filter_watchlist(watchlist):
+    excluded_keywords = ["FINNIFTY", "NIFTYNXT50", "FIN-SERVICE", "FIN_SERVICE"]
+    return [sym for sym in watchlist if not any(ex in sym for ex in excluded_keywords)]
+
 def tv_to_yf_symbol(symbol):
     if symbol.startswith("NSE:"):
         clean = symbol[4:]
@@ -374,8 +381,6 @@ def tv_to_yf_symbol(symbol):
         return "^NSEI"
     elif clean == "BANKNIFTY":
         return "^NSEBANK"
-    elif clean == "FINNIFTY":
-        return "NIFTY_FIN_SERVICE.NS"
     elif clean == "MIDCPNIFTY":
         return "^NSEMDCP50"
     
@@ -384,6 +389,7 @@ def tv_to_yf_symbol(symbol):
 
 def calculate_45m_macd_batch(watchlist):
     logger.info("Fetching 45-minute MACD from yfinance...")
+    watchlist = filter_watchlist(watchlist)
     yf_symbols = [tv_to_yf_symbol(sym) for sym in watchlist]
     yf_to_tv = {tv_to_yf_symbol(sym): sym for sym in watchlist}
     
@@ -454,6 +460,7 @@ def poll_and_save(watchlist, force=False):
 
 def _poll_and_save_impl(watchlist, force=False):
     global LAST_EOD_RUN_DATE, LATEST_OI_CACHE, LAST_OI_FETCH_DATE, FETCH_STATUS
+    watchlist = filter_watchlist(watchlist)
     timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Initialize status
@@ -614,13 +621,13 @@ def _poll_and_save_impl(watchlist, force=False):
         # Trigger UI update
         print("  📡 Notifying Dashboard Generator thread of new records...")
         DATA_UPDATED_EVENT.set()
+        FETCH_STATUS["message"] = "Completed successfully"
     else:
         print("  ⚠️ No valid records to save.")
         FETCH_STATUS["message"] = "No valid records retrieved."
         
     FETCH_STATUS["running"] = False
     FETCH_STATUS["progress"] = len(watchlist)
-    FETCH_STATUS["message"] = "Completed successfully"
 
 def run_dashboard_generator_loop():
     global WATCHLIST
@@ -703,7 +710,7 @@ def main():
     update_logging_level()
     
     global WATCHLIST
-    WATCHLIST = watchlist_manager.fetch_and_initialize_fo_list()
+    WATCHLIST = filter_watchlist(watchlist_manager.fetch_and_initialize_fo_list())
     watchlist = WATCHLIST
     if not watchlist:
         print("Fatal: Could not initialize F&O symbols watchlist.")

@@ -2632,7 +2632,9 @@ def generate_dashboard(symbols):
         
         async function updateDashboardSeamlessly() {{
             try {{
-                const response = await fetch(window.location.href);
+                const baseUrl = getApiUrl('/alerts_dashboard.html');
+                const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + '_t=' + new Date().getTime();
+                const response = await fetch(url);
                 if (!response.ok) return;
                 const htmlText = await response.text();
                 

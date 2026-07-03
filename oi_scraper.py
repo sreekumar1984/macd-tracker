@@ -54,7 +54,7 @@ def fetch_symbol_oi(session, symbol, cookie_dict, headers):
     clean_sym = symbol.split(":")[-1]
     
     # Check if index
-    is_index = clean_sym in ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"]
+    is_index = clean_sym in ["NIFTY", "BANKNIFTY", "MIDCPNIFTY"]
     mkt_type = "Indices" if is_index else "Equities"
     
     # Step 1: Fetch contract info first to update session state

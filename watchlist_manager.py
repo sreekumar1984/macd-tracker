@@ -30,7 +30,7 @@ def fetch_and_initialize_fo_list():
                     name = row[name_idx].strip()
                     
                     if exchange == "NFO" and inst_type == "FUT" and name:
-                        if name == "NIFTYNXT50":
+                        if name in ["NIFTYNXT50", "FINNIFTY", "NIFTY-FIN-SERVICE", "NIFTY_FIN_SERVICE"]:
                             continue
                         # Format for TradingView (replace hyphens with underscores)
                         formatted_name = name.replace("-", "_")
@@ -58,7 +58,7 @@ def use_fallback_list():
         "NSE:ICICIBANK", "NSE:SBIN", "NSE:BHARTIARTL", "NSE:ITC", "NSE:LTIM",
         "NSE:TATAMOTORS", "NSE:KOTAKBANK", "NSE:AXISBANK", "NSE:LT", "NSE:BAJFINANCE",
         "NSE:MARUTI", "NSE:SUNPHARMA", "NSE:HINDUNILVR", "NSE:ADANIENT", "NSE:NIFTY",
-        "NSE:BANKNIFTY", "NSE:FINNIFTY"
+        "NSE:BANKNIFTY"
     ]
     with open(WATCHLIST_PATH, "w") as f:
         json.dump(fallback, f, indent=2)
