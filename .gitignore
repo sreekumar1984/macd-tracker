@@ -15,3 +15,7 @@ __pycache__/
 
 # OS metadata
 .DS_Store
+
+# Cache and JSON data
+vol_ratios.json
+
