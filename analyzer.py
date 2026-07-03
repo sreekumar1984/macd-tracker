@@ -1665,15 +1665,21 @@ def generate_dashboard(symbols):
             elif ratio > 150.0:
                 vol_ratio_style = "color: #fbbf24; font-weight: bold; background: rgba(251, 191, 36, 0.15); padding: 2px 6px; border-radius: 4px;"
 
-        # Determine trend based on price change or MACD change fallback
-        price_change = 0.0
-        if len(rows) >= 2:
-            prev_price = rows[1][1]
-            if prev_price is not None:
-                price_change = s_price - prev_price
-        
-        trend_up = price_change > 0 if price_change != 0 else (macd_change > 0 if has_prev else False)
-        trend_down = price_change < 0 if price_change != 0 else (macd_change < 0 if has_prev else False)
+        # Determine trend based on daily price change if available, fallback to 15m price change or MACD change
+        trend_up = False
+        trend_down = False
+        if s_day_chg is not None and s_day_chg != 0:
+            trend_up = s_day_chg > 0
+            trend_down = s_day_chg < 0
+        else:
+            price_change = 0.0
+            if len(rows) >= 2:
+                prev_price = rows[1][1]
+                if prev_price is not None:
+                    price_change = s_price - prev_price
+            
+            trend_up = price_change > 0 if price_change != 0 else (macd_change > 0 if has_prev else False)
+            trend_down = price_change < 0 if price_change != 0 else (macd_change < 0 if has_prev else False)
         
         # Options / OI Interpretation Setup
         oi_setup = None
