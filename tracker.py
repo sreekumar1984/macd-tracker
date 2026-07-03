@@ -394,6 +394,7 @@ def calculate_45m_macd_batch(watchlist):
     yf_to_tv = {tv_to_yf_symbol(sym): sym for sym in watchlist}
     
     results = {}
+    ratios_results = {}
     import gc
     
     # Chunk the download into batches of 40 to avoid massive RAM spikes and OOM killer on 1GB instances
@@ -440,7 +441,30 @@ def calculate_45m_macd_batch(watchlist):
                     sig = macd.ewm(span=9, adjust=False).mean()
                     hist = macd - sig
                     
+                    # Calculate 15m volume ratio
+                    ratio_15m = None
+                    if 'Volume' in sym_df.columns:
+                        vol_15m_series = sym_df['Volume'].dropna()
+                        if len(vol_15m_series) > 0:
+                            latest_15m_vol = float(vol_15m_series.iloc[-1])
+                            avg_15m_vol = float(vol_15m_series.mean())
+                            if avg_15m_vol > 0:
+                                ratio_15m = (latest_15m_vol / avg_15m_vol) * 100
+
+                    # Calculate 45m volume ratio
+                    ratio_45m = None
+                    if 'Volume' in sym_df.columns:
+                        vol_series = sym_df['Volume'].dropna()
+                        if len(vol_series) > 0:
+                            resampled_vol = vol_series.resample('45min', origin='start_day').sum().dropna()
+                            if len(resampled_vol) > 0:
+                                latest_45m_vol = float(resampled_vol.iloc[-1])
+                                avg_45m_vol = float(resampled_vol.mean())
+                                if avg_45m_vol > 0:
+                                    ratio_45m = (latest_45m_vol / avg_45m_vol) * 100
+                                    
                     results[yf_to_tv[yf_sym]] = (float(macd.iloc[-1]), float(sig.iloc[-1]), float(hist.iloc[-1]))
+                    ratios_results[yf_to_tv[yf_sym]] = (ratio_15m, ratio_45m)
                 except Exception as e:
                     # Ignore individual stock errors
                     pass
@@ -451,6 +475,26 @@ def calculate_45m_macd_batch(watchlist):
             log_memory_usage()
         except Exception as e:
             logger.error(f"Error in yfinance batch: {e}")
+            
+    # Write to vol_ratios.json
+    vol_ratios_path = os.path.join(BASE_DIR, "vol_ratios.json")
+    try:
+        existing_ratios = {}
+        if os.path.exists(vol_ratios_path):
+            with open(vol_ratios_path, "r") as f_r:
+                existing_ratios = json.load(f_r)
+        
+        for tv_sym, (r15, r45) in ratios_results.items():
+            existing_ratios[tv_sym] = {
+                "ratio_15m": r15,
+                "ratio_45m": r45,
+                "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
+        with open(vol_ratios_path, "w") as f_w:
+            json.dump(existing_ratios, f_w, indent=2)
+    except Exception as e_json:
+        logger.error(f"Error saving vol_ratios.json: {e_json}")
             
     return results
 

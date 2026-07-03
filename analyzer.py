@@ -1129,6 +1129,15 @@ def generate_dashboard(symbols):
     if not os.path.exists(db_path):
         return
         
+    vol_ratios_data = {}
+    vol_ratios_path = os.path.join(BASE_DIR, "vol_ratios.json")
+    if os.path.exists(vol_ratios_path):
+        try:
+            with open(vol_ratios_path, "r") as f_vr:
+                vol_ratios_data = json.load(f_vr)
+        except Exception as e_vr:
+            print(f"Error loading vol_ratios.json: {e_vr}")
+        
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -1815,14 +1824,43 @@ def generate_dashboard(symbols):
         </tr>
         """
         
+        # Retrieve intraday volume ratios from cache
+        ratios_info = vol_ratios_data.get(sym, {})
+        ratio_15m = ratios_info.get("ratio_15m")
+        ratio_45m = ratios_info.get("ratio_45m")
+
+        ratio_15m_str = "—"
+        ratio_15m_style = "color: #cbd5e1;"
+        if ratio_15m is not None:
+            ratio_15m_str = f"{ratio_15m:.1f}%"
+            if ratio_15m > 200.0:
+                ratio_15m_style = "color: #fbbf24; font-weight: bold; background: rgba(251, 191, 36, 0.15); padding: 2px 6px; border-radius: 4px;"
+            elif ratio_15m > 120.0:
+                ratio_15m_style = "color: #10b981; font-weight: bold; background: rgba(16, 185, 129, 0.15); padding: 2px 6px; border-radius: 4px;"
+            elif ratio_15m < 50.0:
+                ratio_15m_style = "color: #60a5fa; font-weight: bold; background: rgba(96, 165, 250, 0.15); padding: 2px 6px; border-radius: 4px;"
+
+        ratio_45m_str = "—"
+        ratio_45m_style = "color: #cbd5e1;"
+        if ratio_45m is not None:
+            ratio_45m_str = f"{ratio_45m:.1f}%"
+            if ratio_45m > 200.0:
+                ratio_45m_style = "color: #fbbf24; font-weight: bold; background: rgba(251, 191, 36, 0.15); padding: 2px 6px; border-radius: 4px;"
+            elif ratio_45m > 120.0:
+                ratio_45m_style = "color: #10b981; font-weight: bold; background: rgba(16, 185, 129, 0.15); padding: 2px 6px; border-radius: 4px;"
+            elif ratio_45m < 50.0:
+                ratio_45m_style = "color: #60a5fa; font-weight: bold; background: rgba(96, 165, 250, 0.15); padding: 2px 6px; border-radius: 4px;"
+
         ratio_val = (s_vol / s_avg_vol) * 100 if s_vol is not None and s_avg_vol is not None and s_avg_vol > 0 else 0.0
         day_chg_val = s_day_chg if s_day_chg is not None else 0.0
         
         buildup_rows += f"""
-        <tr class="buildup-row" data-ratio="{ratio_val:.2f}" data-change="{day_chg_val:.2f}">
+        <tr class="buildup-row" data-ratio="{ratio_val:.2f}" data-ratio15="{ratio_15m if ratio_15m is not None else 0.0:.2f}" data-ratio45="{ratio_45m if ratio_45m is not None else 0.0:.2f}" data-change="{day_chg_val:.2f}">
             <td class="col-symbol" style="font-weight: bold; color: #fff;">{sym}</td>
             <td class="col-price">₹{s_price:.2f}</td>
             <td class="col-day_change" style="{day_chg_style}">{day_chg_str}</td>
+            <td class="col-ratio_15m" style="{ratio_15m_style}">{ratio_15m_str}</td>
+            <td class="col-ratio_45m" style="{ratio_45m_style}">{ratio_45m_str}</td>
             <td class="col-ratio" style="{vol_ratio_style}">{vol_ratio_str}</td>
             <td class="col-vol">{fmt_vol(s_vol)}</td>
             <td class="col-avg_vol">{fmt_vol(s_avg_vol)}</td>
@@ -2396,8 +2434,8 @@ def generate_dashboard(symbols):
     <div id="tab-buildup" class="tab-content">
         <div class="container">
             <!-- Stats cards -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                <div class="card" style="margin-bottom: 0; padding: 16px; display: flex; align-items: center; gap: 16px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div class="card" style="margin-bottom: 0; padding: 16px; display: flex; align-items: center; gap: 16px; grid-column: span 2;">
                     <div style="font-size: 32px;">🚀</div>
                     <div>
                         <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Matching Futures</span>
@@ -2405,15 +2443,31 @@ def generate_dashboard(symbols):
                     </div>
                 </div>
                 <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
-                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Min Volume Ratio %</span>
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Min 15m Vol %</span>
+                    <input type="number" id="buildup-min-15m" value="100" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max 15m Vol %</span>
+                    <input type="number" id="buildup-max-15m" value="500" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Min 45m Vol %</span>
+                    <input type="number" id="buildup-min-45m" value="100" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max 45m Vol %</span>
+                    <input type="number" id="buildup-max-45m" value="400" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
+                </div>
+                <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Min Daily Vol %</span>
                     <input type="number" id="buildup-min-vol" value="80" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
                 </div>
                 <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
-                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max Volume Ratio %</span>
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max Daily Vol %</span>
                     <input type="number" id="buildup-max-vol" value="180" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
                 </div>
                 <div class="card" style="margin-bottom: 0; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
-                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max Abs Price Change %</span>
+                    <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Max Abs Price %</span>
                     <input type="number" id="buildup-max-price-change" value="3.0" step="0.5" oninput="applyBuildupFilters()" style="width: 100%; padding: 6px 10px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; font-weight: bold; font-family: 'Outfit';">
                 </div>
             </div>
@@ -2434,7 +2488,9 @@ def generate_dashboard(symbols):
                                 <th class="col-symbol">Symbol</th>
                                 <th class="col-price">Price</th>
                                 <th class="col-day_change">Day Change</th>
-                                <th class="col-ratio">Vol Ratio</th>
+                                <th class="col-ratio_15m">15m Vol Ratio</th>
+                                <th class="col-ratio_45m">45m Vol Ratio</th>
+                                <th class="col-ratio">Daily Vol Ratio</th>
                                 <th class="col-vol">Today's Vol</th>
                                 <th class="col-avg_vol">Avg Vol (10d)</th>
                                 <th class="col-macd_15">MACD (15m)</th>
@@ -2458,7 +2514,7 @@ def generate_dashboard(symbols):
                             </tr>
                         </thead>
                         <tbody id="buildup-table-body">
-                            {buildup_rows or '<tr><td colspan="24" style="text-align:center; padding: 30px; color: var(--text-muted);">No symbols loaded.</td></tr>'}
+                            {buildup_rows or '<tr><td colspan="26" style="text-align:center; padding: 30px; color: var(--text-muted);">No symbols loaded.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -4093,6 +4149,10 @@ def generate_dashboard(symbols):
         }}
 
         function applyBuildupFilters() {{
+            const min15m = parseFloat(document.getElementById('buildup-min-15m').value) || 0;
+            const max15m = parseFloat(document.getElementById('buildup-max-15m').value) || 999999;
+            const min45m = parseFloat(document.getElementById('buildup-min-45m').value) || 0;
+            const max45m = parseFloat(document.getElementById('buildup-max-45m').value) || 999999;
             const minVol = parseFloat(document.getElementById('buildup-min-vol').value) || 0;
             const maxVol = parseFloat(document.getElementById('buildup-max-vol').value) || 999999;
             const maxPriceChange = parseFloat(document.getElementById('buildup-max-price-change').value) || 999999;
@@ -4101,13 +4161,17 @@ def generate_dashboard(symbols):
             let visibleCount = 0;
             
             rows.forEach(row => {{
+                const ratio15 = parseFloat(row.getAttribute('data-ratio15')) || 0;
+                const ratio45 = parseFloat(row.getAttribute('data-ratio45')) || 0;
                 const ratio = parseFloat(row.getAttribute('data-ratio')) || 0;
                 const change = Math.abs(parseFloat(row.getAttribute('data-change')) || 0);
                 
+                const matches15m = ratio15 >= min15m && ratio15 <= max15m;
+                const matches45m = ratio45 >= min45m && ratio45 <= max45m;
                 const matchesVol = ratio >= minVol && ratio <= maxVol;
                 const matchesPrice = change <= maxPriceChange;
                 
-                if (matchesVol && matchesPrice) {{
+                if (matches15m && matches45m && matchesVol && matchesPrice) {{
                     row.style.display = '';
                     visibleCount++;
                 }} else {{
