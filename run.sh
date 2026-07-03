@@ -3,6 +3,12 @@
 # Navigate to the project directory
 cd "$(dirname "$0")"
 
+# Pull latest changes from git
+echo "=========================================================="
+echo "🔄 Pulling latest changes from Git..."
+echo "=========================================================="
+git pull
+
 echo "=========================================================="
 echo "📦 Setting up isolated environment for MACD Momentum Tracker..."
 echo "=========================================================="
