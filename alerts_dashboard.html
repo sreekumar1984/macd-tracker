@@ -265,14 +265,14 @@
             <h1>📊 MACD Momentum & Crossover Tracker</h1>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <span class="meta">Monitoring all F&O stocks every 2 minutes</span>
-                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 112.90 MB (Capped at 30 Days)</span>
+                <span class="db-info" id="db-size-info">🗄️ Database Disk Size: 113.03 MB (Capped at 30 Days)</span>
             </div>
         </div>
         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
             <div class="meta" style="display: flex; align-items: center; gap: 8px; justify-content: flex-end;" id="monitoring-status-container">
                 <span class="pulse" id="status-pulse"></span> <span id="status-text">LIVE MONITORING</span>
             </div>
-            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-07-16 22:38:05</strong></div>
+            <div class="meta" id="last-updated-meta">Last Updated: <strong>2026-07-16 22:43:35</strong></div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div id="fetch-progress-container" style="display: none; font-size: 11px; text-align: right; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 10px; border-radius: 8px; color: #60a5fa; min-width: 180px;">
                     <div id="fetch-progress-text" style="font-weight: 600; margin-bottom: 2px;">Initializing...</div>
@@ -6700,6 +6700,59 @@
                         <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block;">Average Dry-up Ratio</span>
                         <span style="font-size: 24px; font-weight: 800; color: #34d399; font-family: 'Outfit', sans-serif;">38.7%</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Breakout Phase Flow Diagram Card -->
+            <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
+                    🔄 Breakout Lifecycle & Flow Phases (Dixon & ABB Pattern)
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; background: rgba(30, 41, 59, 0.5); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                    
+                    <!-- Phase 1 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(203, 213, 225, 0.03); border-radius: 6px; border: 1px solid rgba(203, 213, 225, 0.08);">
+                        <div style="font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Phase 1: Base</div>
+                        <span style="border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">⚪ NEUTRAL</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Standard consolidation or normal trading activity.</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 2 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(203, 213, 225, 0.05); border-radius: 6px; border: 1px solid rgba(203, 213, 225, 0.15);">
+                        <div style="font-size: 10px; font-weight: bold; color: #cbd5e1; text-transform: uppercase; margin-bottom: 6px;">Phase 2: Supply Dry</div>
+                        <span style="border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">💧 VDU ACTIVE</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Volume drops below 50% average (exhaustion of sellers).</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 3 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(96, 165, 250, 0.05); border-radius: 6px; border: 1px solid rgba(96, 165, 250, 0.2);">
+                        <div style="font-size: 10px; font-weight: bold; color: #60a5fa; text-transform: uppercase; margin-bottom: 6px;">Phase 3: Compress</div>
+                        <span style="border: 1px solid #60a5fa; color: #60a5fa; background: rgba(96, 165, 250, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">⏳ COILING</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Price compresses within a tight range (consolidating / coiling).</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 4 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(239, 68, 68, 0.03); border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.15); animation: glow-pulse 2s infinite;">
+                        <div style="font-size: 10px; font-weight: bold; color: #f87171; text-transform: uppercase; margin-bottom: 6px;">Phase 4: Launchpad</div>
+                        <span style="border: 1px solid #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">🔥 HIGH PROBABILITY</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Coiling + Daily MACD Bullish + Option PE Writing support.</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 5 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(16, 185, 129, 0.05); border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <div style="font-size: 10px; font-weight: bold; color: #34d399; text-transform: uppercase; margin-bottom: 6px;">Phase 5: Fire Up</div>
+                        <span style="border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">🚀 ACTIVE BREAKOUT</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Price breaks range on volume explosion & short covering.</p>
+                    </div>
+                    
                 </div>
             </div>
 
@@ -41372,50 +41425,7 @@
                 <div style="margin-bottom: 20px; font-size: 13px; color: var(--text-muted);">
                     Live logs from the daemon process tracking API requests, calculations, database writes, and memory metrics.
                 </div>
-                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-07-16 21:53:04,505 [INFO] tracker: 💾 Current process RAM usage: 276.02 MB
-2026-07-16 21:54:49,999 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: False
-2026-07-16 21:54:50,002 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-17
-2026-07-16 21:54:50,005 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-18
-2026-07-16 21:54:50,007 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-20
-2026-07-16 21:54:50,009 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-21
-2026-07-16 21:54:50,011 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-26
-2026-07-16 21:54:50,013 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-27
-2026-07-16 21:54:50,016 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-01
-2026-07-16 21:54:50,020 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-03
-2026-07-16 21:54:50,022 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-05
-2026-07-16 21:54:50,026 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-10
-2026-07-16 21:54:50,030 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-13
-2026-07-16 21:54:50,033 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-14
-2026-07-16 21:54:50,037 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-15
-2026-07-16 21:54:50,041 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-16
-2026-07-16 21:54:50,042 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: False
-2026-07-16 21:54:50,045 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-16
-2026-07-16 21:54:54,395 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-07-16 21:54:54,397 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-07-16 21:54:56,018 [INFO] tracker: 💾 Current process RAM usage: 255.80 MB
-2026-07-16 21:54:56,018 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
-2026-07-16 21:54:57,021 [INFO] tracker: 💾 Current process RAM usage: 257.67 MB
-2026-07-16 21:54:57,021 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
-2026-07-16 21:55:00,061 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: False
-2026-07-16 21:55:00,064 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-17
-2026-07-16 21:55:00,067 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-18
-2026-07-16 21:55:00,069 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-20
-2026-07-16 21:55:00,072 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-21
-2026-07-16 21:55:00,074 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-26
-2026-07-16 21:55:00,076 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-27
-2026-07-16 21:55:00,079 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-01
-2026-07-16 21:55:00,083 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-03
-2026-07-16 21:55:00,086 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-05
-2026-07-16 21:55:00,091 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-10
-2026-07-16 21:55:00,095 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-13
-2026-07-16 21:55:00,098 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-14
-2026-07-16 21:55:00,102 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-15
-2026-07-16 21:55:00,105 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-16
-2026-07-16 21:55:00,107 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: False
-2026-07-16 21:55:00,110 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-16
-2026-07-16 21:55:05,392 [INFO] tracker: Fetching 45-minute MACD from yfinance...
-2026-07-16 21:55:05,393 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
-2026-07-16 21:55:06,674 [INFO] tracker: 💾 Current process RAM usage: 264.19 MB
+                <pre id="system-logs-content" style="background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; max-height: 500px; font-family: 'Courier New', Courier, monospace; font-size: 12px; line-height: 1.5; color: #34d399; white-space: pre-wrap; word-wrap: break-word;">2026-07-16 21:55:06,674 [INFO] tracker: 💾 Current process RAM usage: 264.19 MB
 2026-07-16 21:55:06,674 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
 2026-07-16 21:55:07,923 [INFO] tracker: 💾 Current process RAM usage: 266.38 MB
 2026-07-16 21:55:07,923 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
@@ -41672,6 +41682,49 @@
 2026-07-16 22:33:53,569 [INFO] tracker: 💾 Current process RAM usage: 317.23 MB
 2026-07-16 22:33:53,569 [INFO] tracker: Downloading yfinance batch 6/6 (13 symbols)...
 2026-07-16 22:33:54,066 [INFO] tracker: 💾 Current process RAM usage: 317.23 MB
+2026-07-16 22:38:20,263 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: False
+2026-07-16 22:38:20,267 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-17
+2026-07-16 22:38:20,271 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-18
+2026-07-16 22:38:20,274 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-20
+2026-07-16 22:38:20,277 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-21
+2026-07-16 22:38:20,280 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-26
+2026-07-16 22:38:20,283 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-06-27
+2026-07-16 22:38:20,288 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-01
+2026-07-16 22:38:20,293 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-03
+2026-07-16 22:38:20,296 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-05
+2026-07-16 22:38:20,301 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-10
+2026-07-16 22:38:20,307 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-13
+2026-07-16 22:38:20,311 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-14
+2026-07-16 22:38:20,316 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-15
+2026-07-16 22:38:20,321 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-16
+2026-07-16 22:38:20,322 [INFO] tracker: 🔍 [Retrospective] Starting EOD retrospective evaluation. Force evaluate: False
+2026-07-16 22:38:20,327 [INFO] tracker: 🔍 [Retrospective] No new alerts found to evaluate for date: 2026-07-16
+2026-07-16 22:38:24,936 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-07-16 22:38:24,936 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-07-16 22:38:26,683 [INFO] tracker: 💾 Current process RAM usage: 249.77 MB
+2026-07-16 22:38:26,683 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-07-16 22:38:27,686 [INFO] tracker: 💾 Current process RAM usage: 255.44 MB
+2026-07-16 22:38:27,686 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-07-16 22:38:29,344 [INFO] tracker: 💾 Current process RAM usage: 256.67 MB
+2026-07-16 22:38:29,344 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-07-16 22:38:30,363 [INFO] tracker: 💾 Current process RAM usage: 256.67 MB
+2026-07-16 22:38:30,363 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-07-16 22:38:31,497 [INFO] tracker: 💾 Current process RAM usage: 258.38 MB
+2026-07-16 22:38:31,497 [INFO] tracker: Downloading yfinance batch 6/6 (13 symbols)...
+2026-07-16 22:38:32,000 [INFO] tracker: 💾 Current process RAM usage: 258.38 MB
+2026-07-16 22:41:06,588 [INFO] tracker: Fetching 45-minute MACD from yfinance...
+2026-07-16 22:41:06,590 [INFO] tracker: Downloading yfinance batch 1/6 (40 symbols)...
+2026-07-16 22:41:07,675 [INFO] tracker: 💾 Current process RAM usage: 279.42 MB
+2026-07-16 22:41:07,675 [INFO] tracker: Downloading yfinance batch 2/6 (40 symbols)...
+2026-07-16 22:41:08,659 [INFO] tracker: 💾 Current process RAM usage: 279.42 MB
+2026-07-16 22:41:08,660 [INFO] tracker: Downloading yfinance batch 3/6 (40 symbols)...
+2026-07-16 22:41:09,642 [INFO] tracker: 💾 Current process RAM usage: 279.66 MB
+2026-07-16 22:41:09,642 [INFO] tracker: Downloading yfinance batch 4/6 (40 symbols)...
+2026-07-16 22:41:10,877 [INFO] tracker: 💾 Current process RAM usage: 280.28 MB
+2026-07-16 22:41:10,877 [INFO] tracker: Downloading yfinance batch 5/6 (40 symbols)...
+2026-07-16 22:41:11,957 [INFO] tracker: 💾 Current process RAM usage: 281.34 MB
+2026-07-16 22:41:11,957 [INFO] tracker: Downloading yfinance batch 6/6 (13 symbols)...
+2026-07-16 22:41:12,393 [INFO] tracker: 💾 Current process RAM usage: 281.34 MB
 </pre>
                 <div id="system-logs-disabled-message" style="display: none; padding: 40px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 8px; background: #0f172a;">
                     <span style="font-size: 24px; display: block; margin-bottom: 8px;">⏸️</span>

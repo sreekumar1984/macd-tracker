@@ -2471,6 +2471,59 @@ def generate_dashboard(symbols):
                 </div>
             </div>
 
+            <!-- Breakout Phase Flow Diagram Card -->
+            <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
+                    🔄 Breakout Lifecycle & Flow Phases (Dixon & ABB Pattern)
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; background: rgba(30, 41, 59, 0.5); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                    
+                    <!-- Phase 1 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(203, 213, 225, 0.03); border-radius: 6px; border: 1px solid rgba(203, 213, 225, 0.08);">
+                        <div style="font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px;">Phase 1: Base</div>
+                        <span style="border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold;">⚪ NEUTRAL</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Standard consolidation or normal trading activity.</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 2 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(203, 213, 225, 0.05); border-radius: 6px; border: 1px solid rgba(203, 213, 225, 0.15);">
+                        <div style="font-size: 10px; font-weight: bold; color: #cbd5e1; text-transform: uppercase; margin-bottom: 6px;">Phase 2: Supply Dry</div>
+                        <span style="border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">💧 VDU ACTIVE</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Volume drops below 50% average (exhaustion of sellers).</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 3 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(96, 165, 250, 0.05); border-radius: 6px; border: 1px solid rgba(96, 165, 250, 0.2);">
+                        <div style="font-size: 10px; font-weight: bold; color: #60a5fa; text-transform: uppercase; margin-bottom: 6px;">Phase 3: Compress</div>
+                        <span style="border: 1px solid #60a5fa; color: #60a5fa; background: rgba(96, 165, 250, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">⏳ COILING</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Price compresses within a tight range (consolidating / coiling).</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 4 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(239, 68, 68, 0.03); border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.15); animation: glow-pulse 2s infinite;">
+                        <div style="font-size: 10px; font-weight: bold; color: #f87171; text-transform: uppercase; margin-bottom: 6px;">Phase 4: Launchpad</div>
+                        <span style="border: 1px solid #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">🔥 HIGH PROBABILITY</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Coiling + Daily MACD Bullish + Option PE Writing support.</p>
+                    </div>
+                    
+                    <div style="color: var(--text-muted); font-size: 18px; font-weight: bold; margin: 0 4px;">➔</div>
+                    
+                    <!-- Phase 5 -->
+                    <div style="flex: 1; min-width: 160px; text-align: center; padding: 12px; background: rgba(16, 185, 129, 0.05); border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <div style="font-size: 10px; font-weight: bold; color: #34d399; text-transform: uppercase; margin-bottom: 6px;">Phase 5: Fire Up</div>
+                        <span style="border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">🚀 ACTIVE BREAKOUT</span>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0; line-height: 1.3;">Price breaks range on volume explosion & short covering.</p>
+                    </div>
+                    
+                </div>
+            </div>
+
             <!-- F&O Volume Dry-up List Card -->
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
