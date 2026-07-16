@@ -16,6 +16,95 @@ DASHBOARD_PATH = os.path.join(BASE_DIR, "alerts_dashboard.html")
 
 TRACKER_LOG_PATH = os.path.join(BASE_DIR, "tracker.log")
 
+def generate_dryup_analysis(sym, price, day_chg, vol, avg_vol, macd, hist, macd_day, hist_day, rsi_day, pcr, fut_oi_chg, hist_45):
+    points = []
+    ratio = (vol / avg_vol) * 100 if avg_vol and vol else 100
+    
+    # 1. Volume Dry-up level
+    if ratio < 20:
+        points.append(f"🔴 Severe VDU ({ratio:.1f}%)")
+    elif ratio < 40:
+        points.append(f"💧 Strong VDU ({ratio:.1f}%)")
+    else:
+        points.append(f"⏳ Moderate VDU ({ratio:.1f}%)")
+        
+    # 2. Price Action & Futures OI setup (Short Covering / Long Buildup)
+    if day_chg is not None and fut_oi_chg is not None:
+        if day_chg > 1.0 and fut_oi_chg < -1.5:
+            points.append(f"⚡ Short Covering (OI {fut_oi_chg:+.1f}%, Price +{day_chg:.1f}%)")
+        elif day_chg > 1.0 and fut_oi_chg > 1.5:
+            points.append(f"🚀 Long Buildup (OI +{fut_oi_chg:.1f}%, Price +{day_chg:.1f}%)")
+        elif day_chg < -1.0 and fut_oi_chg > 1.5:
+            points.append(f"⚠️ Short Buildup (OI +{fut_oi_chg:.1f}%, Price {day_chg:.1f}%)")
+        elif day_chg < -1.0 and fut_oi_chg < -1.5:
+            points.append(f"📉 Long Unwinding (OI {fut_oi_chg:.1f}%, Price {day_chg:.1f}%)")
+        elif abs(day_chg) <= 1.0:
+            points.append(f"🔍 Consolidation ({day_chg:+.1f}%)")
+    elif day_chg is not None:
+        if abs(day_chg) <= 1.0:
+            points.append(f"🔍 Consolidation ({day_chg:+.1f}%)")
+        else:
+            points.append(f"📈 Price Trend ({day_chg:+.1f}%)")
+            
+    # 3. Daily & 45m MACD Trend Alignment
+    if hist_day is not None and hist_day > 0:
+        if hist_45 is not None and hist_45 > 0:
+            points.append("🟢 Aligned Bullish Trend (Daily & 45m positive)")
+        else:
+            points.append("🟡 Bullish Daily Base, lower tf consolidation")
+    elif hist_day is not None and hist_day < 0:
+        points.append("🔴 Daily Trend Bearish (Accumulation check)")
+
+    # 4. Options support
+    if pcr is not None:
+        if pcr > 1.1:
+            points.append(f"📈 Option PCR {pcr:.2f} (Put writing support)")
+        elif pcr < 0.7:
+            points.append(f"📉 Option PCR {pcr:.2f} (Call writing resistance)")
+            
+    # 5. RSI Room to expand
+    if rsi_day is not None:
+        if rsi_day > 70:
+            points.append(f"Daily RSI overbought ({rsi_day:.1f})")
+        elif rsi_day < 40:
+            points.append(f"Daily RSI oversold ({rsi_day:.1f})")
+        else:
+            points.append(f"Daily RSI healthy ({rsi_day:.1f}) - room to run")
+
+    return " | ".join(points)
+
+def check_breakout_indication(sym, price, day_chg, vol, avg_vol, macd, hist, macd_day, hist_day, rsi_day, pcr, fut_oi_chg, hist_45):
+    ratio = (vol / avg_vol) * 100 if avg_vol and vol else 100
+    
+    is_vdu = ratio < 50.0
+    is_tight = day_chg is not None and abs(day_chg) <= 1.5
+    is_daily_bullish = hist_day is not None and hist_day > 0
+    is_options_bullish = pcr is not None and pcr >= 0.8
+    
+    # 1. Breakout Active / Squeeze (like Dixon/ABB today)
+    if day_chg is not None and day_chg > 2.0 and ratio > 100.0:
+        if fut_oi_chg is not None and fut_oi_chg < -1.0:
+            return "🚀 ACTIVE SQUEEZE (Short Covering)", "border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1);"
+        else:
+            return "🚀 ACTIVE BREAKOUT (Volume Surge)", "border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1);"
+            
+    # 2. High Probability Setup (Dixon/ABB coiling setup - VDU + tight range + Daily Bullish MACD + Option PE Writing)
+    if is_vdu and is_tight and is_daily_bullish:
+        if is_options_bullish:
+            return "🔥 HIGH PROBABILITY (Dixon/ABB Setup)", "border: 1px solid #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.1); font-weight: bold; animation: glow-pulse 1.5s infinite;"
+        else:
+            return "⏳ COILING (VDU + Daily Support)", "border: 1px solid #fbbf24; color: #fbbf24; background: rgba(251, 191, 36, 0.1);"
+            
+    # 3. Consolidation (VDU + tight range)
+    if is_vdu and is_tight:
+        return "⏳ COILING (Consolidating)", "border: 1px solid #60a5fa; color: #60a5fa; background: rgba(96, 165, 250, 0.1);"
+        
+    # 4. Standard VDU
+    if is_vdu:
+        return "💧 VDU Active (Watch Range)", "border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05);"
+        
+    return "⚪ Neutral", "color: #94a3b8;"
+
 def tail_file(filepath, lines_count=200):
     """
     Reads the last `lines_count` lines of a file efficiently without loading the whole file into memory.
@@ -1761,9 +1850,17 @@ def generate_dashboard(symbols):
             interp = f"{interp} + 💧 Dry-up"
             
         if is_dryup:
+            analysis_text = generate_dryup_analysis(
+                sym, s_price, s_day_chg, s_vol, s_avg_vol, s_macd, s_hist,
+                s_macd_day, s_macd_hist_day, s_rsi_day, s_pcr, s_fut_oi_chg, s_hist_45
+            )
+            brk_status, brk_style = check_breakout_indication(
+                sym, s_price, s_day_chg, s_vol, s_avg_vol, s_macd, s_hist,
+                s_macd_day, s_macd_hist_day, s_rsi_day, s_pcr, s_fut_oi_chg, s_hist_45
+            )
             # We store the required elements for the Dry-up Tab row
             dryup_list.append((
-                sym, s_price, s_macd, s_sig, s_hist, trend_str, trend_style, rsi_str, rsi_style, s_vol, s_avg_vol, (s_vol / s_avg_vol) * 100, vol_ratio_style, interp, interp_style, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day, s_macd_45, s_sig_45, s_hist_45
+                sym, s_price, s_macd, s_sig, s_hist, trend_str, trend_style, rsi_str, rsi_style, s_vol, s_avg_vol, (s_vol / s_avg_vol) * 100, vol_ratio_style, interp, interp_style, s_rsi_30, s_rsi_60, s_macd_day, s_macd_sig_day, s_macd_hist_day, s_rsi_day, s_macd_45, s_sig_45, s_hist_45, analysis_text, brk_status, brk_style
             ))
             
         # Format individual MACD columns
@@ -1902,7 +1999,7 @@ def generate_dashboard(symbols):
         most_compressed_str = f"{best[0]} ({best[11]:.1f}%)"
         
         for item in dryup_list:
-            sym, price, macd_val, sig_val, hist_val, tr_str, tr_style, r_str, r_style, vol_val, avg_vol_val, ratio_val, ratio_style, interp_val, interp_style, r_30, r_60, m_day, m_sig_day, m_hist_day, r_day, m_45, m_sig_45, m_hist_45 = item
+            sym, price, macd_val, sig_val, hist_val, tr_str, tr_style, r_str, r_style, vol_val, avg_vol_val, ratio_val, ratio_style, interp_val, interp_style, r_30, r_60, m_day, m_sig_day, m_hist_day, r_day, m_45, m_sig_45, m_hist_45, analysis_val, brk_status, brk_style = item
             
             # Format individual MACD columns
             macd_color = "#22c55e" if macd_val is not None and macd_val > config.get("momentum_threshold", 5.0) else "#cbd5e1"
@@ -1936,6 +2033,8 @@ def generate_dashboard(symbols):
                 <td class="col-hist_day" style="color: {hist_day_color}; font-weight: bold;">{f"{m_hist_day:+.3f}" if m_hist_day is not None else "—"}</td>
                 <td class="col-rsi_day">{f"{r_day:.2f}" if r_day is not None else "—"}</td>
                 <td class="col-interp" style="{interp_style}">{interp_val}</td>
+                <td class="col-breakout" style="text-align: center;"><span style="{brk_style} padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: bold; text-transform: uppercase;">{brk_status}</span></td>
+                <td class="col-analysis" style="color: #93c5fd; font-size: 11px; text-align: left; max-width: 320px; white-space: normal; line-height: 1.4;">{analysis_val}</td>
             </tr>
             """
             
@@ -2194,6 +2293,12 @@ def generate_dashboard(symbols):
             70% {{ transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }}
             100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }}
         }}
+
+        @keyframes glow-pulse {{
+            0% {{ opacity: 0.7; }}
+            50% {{ opacity: 1.0; }}
+            100% {{ opacity: 0.7; }}
+        }}
     </style>
 </head>
 <body>
@@ -2397,6 +2502,8 @@ def generate_dashboard(symbols):
                                 <th class="col-hist_day">Hist (Day)</th>
                                 <th class="col-rsi_day">RSI (Day)</th>
                                 <th class="col-interp">Interpretation</th>
+                                <th class="col-breakout">Breakout Indication</th>
+                                <th class="col-analysis" style="text-align: left; min-width: 250px;">Analysis & Reasoning</th>
                             </tr>
                             <tr class="filter-row">
                                 <td class="col-symbol"><input type="text" id="flt-dry-symbol" oninput="applyAllDryupFilters()" placeholder="Filter symbol..."></td>
@@ -2419,10 +2526,12 @@ def generate_dashboard(symbols):
                                 <td class="col-hist_day"><input type="text" id="flt-dry-hist-day" oninput="applyAllDryupFilters()" placeholder="e.g. >0"></td>
                                 <td class="col-rsi_day"><input type="text" id="flt-dry-rsi-day" oninput="applyAllDryupFilters()" placeholder="e.g. >50"></td>
                                 <td class="col-interp"><input type="text" id="flt-dry-interp" oninput="applyAllDryupFilters()" placeholder="Filter signal..."></td>
+                                <td class="col-breakout"><input type="text" id="flt-dry-breakout" oninput="applyAllDryupFilters()" placeholder="Filter breakout..."></td>
+                                <td class="col-analysis"><input type="text" id="flt-dry-analysis" oninput="applyAllDryupFilters()" placeholder="Filter analysis..."></td>
                             </tr>
                         </thead>
                         <tbody id="dryup-table-body">
-                            {dryup_rows or '<tr><td colspan="20" style="text-align:center; padding: 30px; color: var(--text-muted);">No active volume dry-ups detected.</td></tr>'}
+                            {dryup_rows or '<tr><td colspan="22" style="text-align:center; padding: 30px; color: var(--text-muted);">No active volume dry-ups detected.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -2716,6 +2825,8 @@ def generate_dashboard(symbols):
                 <label><input type="checkbox" id="cfg-col-hist_day" onchange="toggleColumn('hist_day')"> Hist (Day)</label>
                 <label><input type="checkbox" id="cfg-col-rsi_day" onchange="toggleColumn('rsi_day')"> RSI (Day)</label>
                 <label><input type="checkbox" id="cfg-col-interp" onchange="toggleColumn('interp')"> Interpretation</label>
+                <label><input type="checkbox" id="cfg-col-breakout" onchange="toggleColumn('breakout')"> Breakout Indication</label>
+                <label><input type="checkbox" id="cfg-col-analysis" onchange="toggleColumn('analysis')"> Analysis & Reasoning</label>
             </div>
         </div>
     </div>
@@ -3064,7 +3175,9 @@ def generate_dashboard(symbols):
                 signal_day: document.getElementById('flt-dry-signal-day').value,
                 hist_day: document.getElementById('flt-dry-hist-day').value,
                 rsi_day: document.getElementById('flt-dry-rsi-day').value,
-                interp: document.getElementById('flt-dry-interp').value
+                interp: document.getElementById('flt-dry-interp').value,
+                breakout: document.getElementById('flt-dry-breakout').value,
+                analysis: document.getElementById('flt-dry-analysis').value
             }};
             
             localStorage.setItem('macd_multi_filters_dryup', JSON.stringify(filters));
@@ -3092,13 +3205,15 @@ def generate_dashboard(symbols):
                     const matchHistDay = evaluateFilter(row.querySelector('.col-hist_day').textContent, filters.hist_day);
                     const matchRsiDay = evaluateFilter(row.querySelector('.col-rsi_day').textContent, filters.rsi_day);
                     const matchInterp = row.querySelector('.col-interp').textContent.toLowerCase().includes(filters.interp.toLowerCase().trim());
+                    const matchBreakout = row.querySelector('.col-breakout').textContent.toLowerCase().includes(filters.breakout.toLowerCase().trim());
+                    const matchAnalysis = row.querySelector('.col-analysis').textContent.toLowerCase().includes(filters.analysis.toLowerCase().trim());
                     
                     const matchesAll = matchSymbol && matchPrice && matchRatio && matchVol && 
                                        matchAvgVol && matchMacd15 && matchSignal15 && matchHist15 &&
                                        matchMacd45 && matchSignal45 && matchHist45 && matchTrend && 
                                        matchRsi && matchRsi30 && matchRsi60 && 
                                        matchMacdDay && matchSignalDay && matchHistDay &&
-                                       matchRsiDay && matchInterp;
+                                       matchRsiDay && matchInterp && matchBreakout && matchAnalysis;
                     row.style.display = matchesAll ? '' : 'none';
                 }}
             }});
@@ -3173,6 +3288,8 @@ def generate_dashboard(symbols):
                     if(document.getElementById('flt-dry-hist-day')) document.getElementById('flt-dry-hist-day').value = filters.hist_day || '';
                     if(document.getElementById('flt-dry-rsi-day')) document.getElementById('flt-dry-rsi-day').value = filters.rsi_day || '';
                     document.getElementById('flt-dry-interp').value = filters.interp || '';
+                    if(document.getElementById('flt-dry-breakout')) document.getElementById('flt-dry-breakout').value = filters.breakout || '';
+                    if(document.getElementById('flt-dry-analysis')) document.getElementById('flt-dry-analysis').value = filters.analysis || '';
                     applyAllDryupFilters();
                 }} catch(e) {{
                     console.error("Error restoring dryup filters:", e);
@@ -3205,7 +3322,9 @@ def generate_dashboard(symbols):
             signal_day: true,
             hist_day: true,
             rsi_day: true,
-            interp: true
+            interp: true,
+            breakout: true,
+            analysis: true
         }};
 
         function getColumnPreferences() {{
