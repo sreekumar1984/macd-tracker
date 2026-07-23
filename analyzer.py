@@ -76,32 +76,50 @@ def generate_dryup_analysis(sym, price, day_chg, vol, avg_vol, macd, hist, macd_
 def check_breakout_indication(sym, price, day_chg, vol, avg_vol, macd, hist, macd_day, hist_day, rsi_day, pcr, fut_oi_chg, hist_45):
     ratio = (vol / avg_vol) * 100 if avg_vol and vol else 100
     
-    is_vdu = ratio < 50.0
+    # Decoupled VDU limits: strict 30% for Bullish, moderate 60% for Bearish
+    is_bull_vdu = ratio < 30.0
+    is_bear_vdu = ratio < 60.0
     is_tight = day_chg is not None and abs(day_chg) <= 1.5
     is_daily_bullish = hist_day is not None and hist_day > 0
+    is_daily_bearish = hist_day is not None and hist_day < 0
     is_options_bullish = pcr is not None and pcr >= 0.8
+    is_options_bearish = pcr is not None and pcr < 0.8
     
-    # 1. Breakout Active / Squeeze (like Dixon/ABB today)
-    if day_chg is not None and day_chg > 2.0 and ratio > 100.0:
-        if fut_oi_chg is not None and fut_oi_chg < -1.0:
-            return "🚀 ACTIVE SQUEEZE (Short Covering)", "border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1);"
-        else:
-            return "🚀 ACTIVE BREAKOUT (Volume Surge)", "border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1);"
+    # 1. Breakout / Breakdown Active (Volume Surge)
+    if day_chg is not None:
+        if day_chg > 2.0 and ratio > 100.0:
+            if fut_oi_chg is not None and fut_oi_chg < -1.0:
+                return "🚀 ACTIVE SQUEEZE (Short Covering)", "border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1);"
+            else:
+                return "🚀 ACTIVE BREAKOUT (Volume Surge)", "border: 1px solid #10b981; color: #34d399; background: rgba(16, 185, 129, 0.1);"
+        elif day_chg < -2.0 and ratio > 100.0:
+            return "🚀 ACTIVE BREAKDOWN (Volume Panic)", "border: 1px solid #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.1);"
             
-    # 2. High Probability Setup (Dixon/ABB coiling setup - VDU + tight range + Daily Bullish MACD + Option PE Writing)
-    if is_vdu and is_tight and is_daily_bullish:
-        if is_options_bullish:
-            return "🔥 HIGH PROBABILITY (Dixon/ABB Setup)", "border: 1px solid #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.1); font-weight: bold; animation: glow-pulse 1.5s infinite;"
-        else:
-            return "⏳ COILING (VDU + Daily Support)", "border: 1px solid #fbbf24; color: #fbbf24; background: rgba(251, 191, 36, 0.1);"
-            
+    # 2. High Probability Setups (VDU + tight range + Daily Support/Resistance + Options support)
+    if is_tight:
+        # Bullish Setup
+        if is_bull_vdu and is_daily_bullish:
+            if is_options_bullish:
+                return "🔥 HIGH PROBABILITY (Bullish Setup)", "border: 1px solid #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.1); font-weight: bold; animation: glow-pulse 1.5s infinite;"
+            else:
+                return "⏳ COILING (VDU + Daily Support)", "border: 1px solid #fbbf24; color: #fbbf24; background: rgba(251, 191, 36, 0.1);"
+        # Bearish Setup
+        elif is_bear_vdu and is_daily_bearish:
+            if is_options_bearish:
+                return "🔥 HIGH PROBABILITY (Bearish Setup)", "border: 1px solid #3b82f6; color: #60a5fa; background: rgba(59, 130, 246, 0.1); font-weight: bold; animation: glow-pulse 1.5s infinite;"
+            else:
+                return "⏳ COILING (Bearish Resistance)", "border: 1px solid #a78bfa; color: #a78bfa; background: rgba(139, 92, 246, 0.1);"
+                
     # 3. Consolidation (VDU + tight range)
-    if is_vdu and is_tight:
-        return "⏳ COILING (Consolidating)", "border: 1px solid #60a5fa; color: #60a5fa; background: rgba(96, 165, 250, 0.1);"
+    if is_tight:
+        if is_bull_vdu or is_bear_vdu:
+            return "⏳ COILING (Consolidating)", "border: 1px solid #60a5fa; color: #60a5fa; background: rgba(96, 165, 250, 0.1);"
         
     # 4. Standard VDU
-    if is_vdu:
-        return "💧 VDU Active (Watch Range)", "border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05);"
+    if is_bull_vdu:
+        return "💧 VDU Active (Strict Watch)", "border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05);"
+    elif is_bear_vdu:
+        return "💧 VDU Active (Standard Watch)", "border: 1px solid #cbd5e1; color: #cbd5e1; background: rgba(203, 213, 225, 0.05);"
         
     return "⚪ Neutral", "color: #94a3b8;"
 
@@ -687,6 +705,74 @@ def apply_adaptive_filter(alert, config):
             alert["message"] = alert["message"] + f" [Low Conviction - AI Suppressed ({rule_source})]"
     return alert
 
+def tag_high_probability_big_mover(alert):
+    alert_type = alert.get("alert_type")
+    rsi = alert.get("rsi")
+    vol = alert.get("volume")
+    avg_vol = alert.get("average_volume")
+    pcr = alert.get("pcr")
+    fut_oi_chg = alert.get("futures_oi_change_pct")
+    day_chg = alert.get("day_change")
+    rsi_30 = alert.get("rsi_30")
+    rsi_60 = alert.get("rsi_60")
+    rsi_day = alert.get("rsi_day")
+    macd_hist_day = alert.get("macd_hist_day")
+    macd_hist_45 = alert.get("macd_hist_45")
+    hist_change = alert.get("histogram_change")
+    
+    vol_ratio = (vol / avg_vol * 100) if (vol is not None and avg_vol and avg_vol > 0) else 100.0
+    
+    # 1. Golden RSI Momentum (🏆 Bullish Super-Strategy)
+    if alert_type in ("HIGH_VOLUME", "MACD_INCREASE", "BULLISH_CROSSOVER", "HISTOGRAM_ACCELERATING", "MOMENTUM_START") or (alert_type == "VOLUME_DRYUP" and day_chg is not None and day_chg > 0):
+        if rsi_day is not None and rsi_day > 50.0 and rsi is not None and rsi > 50.0 and rsi_30 is not None and rsi_60 is not None and rsi_30 > rsi_60:
+            alert["severity"] = "CRITICAL"
+            msg = alert["message"]
+            if " [Low Conviction - AI Suppressed" in msg:
+                msg = msg.split(" [Low Conviction - AI Suppressed")[0]
+            alert["message"] = msg + " 🌟 [GOLDEN RSI MOMENTUM]"
+            return alert
+
+    # 2. Triple MACD Alignment (🥈 Bullish Runner-up Strategy)
+    if alert_type in ("HIGH_VOLUME", "MACD_INCREASE", "BULLISH_CROSSOVER", "HISTOGRAM_ACCELERATING", "MOMENTUM_START") or (alert_type == "VOLUME_DRYUP" and day_chg is not None and day_chg > 0):
+        if macd_hist_day is not None and macd_hist_day > 0 and macd_hist_45 is not None and macd_hist_45 > 0 and hist_change is not None and hist_change > 0.1:
+            alert["severity"] = "CRITICAL"
+            msg = alert["message"]
+            if " [Low Conviction - AI Suppressed" in msg:
+                msg = msg.split(" [Low Conviction - AI Suppressed")[0]
+            alert["message"] = msg + " 💎 [TRIPLE MACD ALIGNMENT]"
+            return alert
+
+    # 3. Institutional Buying Pressure (🟢 Bullish Big Mover)
+    if alert_type in ("HIGH_VOLUME", "MACD_INCREASE", "BULLISH_CROSSOVER", "HISTOGRAM_ACCELERATING", "MOMENTUM_START") or (alert_type == "VOLUME_DRYUP" and day_chg is not None and day_chg > 0):
+        if vol_ratio > 200.0 and fut_oi_chg is not None and fut_oi_chg > 2.0:
+            alert["severity"] = "CRITICAL"
+            msg = alert["message"]
+            if " [Low Conviction - AI Suppressed" in msg:
+                msg = msg.split(" [Low Conviction - AI Suppressed")[0]
+            alert["message"] = msg + " 🚀 [BIG MOVER: Institutional Accumulation]"
+            return alert
+            
+    # 4. Institutional Short Accumulation (🔴 Bearish Big Mover)
+    if alert_type == "BEARISH_CROSSOVER" or (alert_type == "VOLUME_DRYUP" and day_chg is not None and day_chg < 0):
+        if vol_ratio > 150.0 and fut_oi_chg is not None and fut_oi_chg > 2.0:
+            alert["severity"] = "CRITICAL"
+            msg = alert["message"]
+            if " [Low Conviction - AI Suppressed" in msg:
+                msg = msg.split(" [Low Conviction - AI Suppressed")[0]
+            alert["message"] = msg + " 📉 [BIG MOVER: Short Buildup]"
+            return alert
+            
+    # 5. Volume Dry-Up Coiled Spring (🟢 Bullish Big Mover)
+    if alert_type == "VOLUME_DRYUP" and vol_ratio < 20.0 and rsi is not None and rsi < 45.0 and pcr is not None and pcr < 0.7:
+        alert["severity"] = "CRITICAL"
+        msg = alert["message"]
+        if " [Low Conviction - AI Suppressed" in msg:
+            msg = msg.split(" [Low Conviction - AI Suppressed")[0]
+        alert["message"] = msg + " ⚡ [BIG MOVER: Coiled Spring Setup]"
+        return alert
+        
+    return alert
+
 def analyze_all_symbols(symbols):
     config = load_config()
     db_path = "/Users/sree/macd_momentum_tracker/db/macd_history.db"
@@ -800,6 +886,7 @@ def analyze_all_symbols(symbols):
                 "macd_hist_45": lat_macd_hist_45
             }
             alert = apply_adaptive_filter(alert, config)
+            alert = tag_high_probability_big_mover(alert)
             alerts_triggered.append(alert)
             
             with open(ALERTS_LOG_PATH, "a") as f_log:
@@ -842,6 +929,7 @@ def analyze_all_symbols(symbols):
                     "macd_hist_45": lat_macd_hist_45
                 }
                 dry_alert = apply_adaptive_filter(dry_alert, config)
+                dry_alert = tag_high_probability_big_mover(dry_alert)
                 alerts_triggered.append(dry_alert)
                 with open(ALERTS_LOG_PATH, "a") as f_log:
                     f_log.write(json.dumps(dry_alert) + "\n")
@@ -885,6 +973,7 @@ def analyze_all_symbols(symbols):
                         "macd_hist_45": lat_macd_hist_45
                     }
                     high_vol_alert = apply_adaptive_filter(high_vol_alert, config)
+                    high_vol_alert = tag_high_probability_big_mover(high_vol_alert)
                     alerts_triggered.append(high_vol_alert)
                     with open(ALERTS_LOG_PATH, "a") as f_log:
                         f_log.write(json.dumps(high_vol_alert) + "\n")
@@ -1664,7 +1753,7 @@ def generate_dashboard(symbols):
     
     # Load recent alerts
     recent_alerts = get_latest_alerts_from_log(50)
-    recent_alerts_large = get_latest_alerts_from_log(500)
+    recent_alerts_large = get_latest_alerts_from_log(4000)
     alerts_json_str = json.dumps(recent_alerts_large)
     tracker_logs_text = get_latest_tracker_logs(300)
     
@@ -1698,6 +1787,8 @@ def generate_dashboard(symbols):
     snapshot_rows = ""
     buildup_rows = ""
     dryup_list = []
+    next_day_candidate_rows = ""
+    next_day_count = 0
     for s_info in latest_snapshot:
         sym, rows = s_info
         if not rows:
@@ -1758,7 +1849,11 @@ def generate_dashboard(symbols):
         if s_vol is not None and s_avg_vol is not None and s_avg_vol > 0:
             ratio = (s_vol / s_avg_vol) * 100
             vol_ratio_str = f"{ratio:.1f}%"
-            if ratio < 50.0:
+            # Decouple is_dryup: Bullish bias requires strict 30% VDU, Bearish bias uses moderate 60%
+            is_bullish_bias = (s_day_chg is not None and s_day_chg >= 0) or (s_hist is not None and s_hist > 0)
+            vdu_threshold = 30.0 if is_bullish_bias else 60.0
+            
+            if ratio < vdu_threshold:
                 is_dryup = True
                 vol_ratio_style = "color: #60a5fa; font-weight: bold; background: rgba(96, 165, 250, 0.15); padding: 2px 6px; border-radius: 4px;"
             elif ratio > 150.0:
@@ -1849,6 +1944,50 @@ def generate_dashboard(symbols):
         if is_dryup and "Vol Dry-up" not in interp and interp != "⚪ Neutral":
             interp = f"{interp} + 💧 Dry-up"
             
+        # Check next-day coiling setups
+        if s_vol is not None and s_avg_vol is not None and s_avg_vol > 0:
+            ratio = (s_vol / s_avg_vol) * 100
+            is_bull_vdu = ratio < 30.0
+            is_bear_vdu = ratio < 60.0
+            is_tight = s_day_chg is not None and abs(s_day_chg) <= 1.5
+            is_daily_bullish = s_macd_hist_day is not None and s_macd_hist_day > 0
+            is_daily_bearish = s_macd_hist_day is not None and s_macd_hist_day < 0
+            
+            is_next_day = False
+            setup_type = ""
+            setup_color = ""
+            
+            if is_tight:
+                if is_bull_vdu and is_daily_bullish:
+                    is_next_day = True
+                    setup_type = "🟢 Bullish Coiling (VDU + Support)"
+                    setup_color = "#10b981"
+                elif is_bear_vdu and is_daily_bearish:
+                    is_next_day = True
+                    setup_type = "🔴 Bearish Coiling (VDU + Resistance)"
+                    setup_color = "#ef4444"
+                    
+            if is_next_day:
+                pcr_val_str = f"{s_pcr:.2f}" if s_pcr is not None else "—"
+                oi_chg_str = f"{s_fut_oi_chg:+.2f}%" if s_fut_oi_chg is not None else "—"
+                oi_color = "#10b981" if s_fut_oi_chg is not None and s_fut_oi_chg > 0 else "#ef4444" if s_fut_oi_chg is not None and s_fut_oi_chg < 0 else "#cbd5e1"
+                rsi_day_str = f"{s_rsi_day:.1f}" if s_rsi_day is not None else "—"
+                macd_hist_day_str = f"{s_macd_hist_day:+.3f}" if s_macd_hist_day is not None else "—"
+                
+                next_day_candidate_rows += f"""
+                <tr>
+                    <td style="font-weight: bold; color: #fff;">{sym}</td>
+                    <td>₹{s_price:.2f}</td>
+                    <td style="font-weight: bold; color: {setup_color};">{setup_type}</td>
+                    <td style="font-weight: bold; color: #60a5fa;">{ratio:.1f}%</td>
+                    <td style="font-weight: bold; color: {setup_color};">{macd_hist_day_str}</td>
+                    <td>{pcr_val_str}</td>
+                    <td style="font-weight: bold; color: {oi_color};">{oi_chg_str}</td>
+                    <td>{rsi_day_str}</td>
+                </tr>
+                """
+                next_day_count += 1
+
         if is_dryup:
             analysis_text = generate_dryup_analysis(
                 sym, s_price, s_day_chg, s_vol, s_avg_vol, s_macd, s_hist,
@@ -2471,6 +2610,35 @@ def generate_dashboard(symbols):
                 </div>
             </div>
 
+            <!-- Next-Day Breakout Candidates Card -->
+            <div class="card" style="margin-bottom: 24px; padding: 20px;">
+                <h2 style="margin-top: 0; margin-bottom: 6px; color: #fff; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
+                    🔮 Tomorrow's Breakout Candidates (EOD Coiling Setups)
+                </h2>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+                    Stocks exhibiting extreme price compression (Daily Range &le; 1.5%) and decoupled volume dry-up (Bullish &le; 30%, Bearish &le; 60%) alongside daily trend support/resistance. Review near market close (3:15 PM) for next-day breakout entries.
+                </div>
+                <div class="table-wrap">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <th style="padding: 8px;">Symbol</th>
+                                <th style="padding: 8px;">Price</th>
+                                <th style="padding: 8px;">Setup Type</th>
+                                <th style="padding: 8px;">Today's Vol Ratio</th>
+                                <th style="padding: 8px;">Daily MACD Hist</th>
+                                <th style="padding: 8px;">Option PCR</th>
+                                <th style="padding: 8px;">Futures OI &Delta;%</th>
+                                <th style="padding: 8px;">Daily RSI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {next_day_candidate_rows if next_day_candidate_rows else '<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">No coiling next-day setups detected yet (Setups require tight day range and decoupled volume dry-up).</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Breakout Phase Flow Diagram Card -->
             <div class="card" style="margin-bottom: 24px; padding: 20px;">
                 <h3 style="margin-top: 0; margin-bottom: 16px; color: #fff; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
@@ -2694,18 +2862,29 @@ def generate_dashboard(symbols):
                     Customize focus alerts parameters. This panel screens triggered alerts based on minimum Volume Ratio, Severity, and type.
                 </div>
                 
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group" style="margin-bottom: 0; grid-column: span 2;">
+                        <label for="inp-focus-preset">🏆 Mined Pattern Presets</label>
+                        <select id="inp-focus-preset" onchange="applyFocusPreset()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer;">
+                            <option value="NONE" selected>Select a Mined Pattern Confluence Preset...</option>
+                            <option value="BULLISH_CONFLUENCE">🟢 Bullish Confluence (RSI 50-70 | PCR < 0.8 | Futures OI Δ >= +3.0% | Vol Ratio >= 100%) - Win Rate: 56.8%</option>
+                            <option value="BEARISH_CONFLUENCE">🔴 Bearish Confluence (RSI 50-70 | PCR 0.8-1.2 | Futures OI Δ < 0% | Vol Ratio >= 100%) - Win Rate: 60.0%</option>
+                            <option value="CLEAR">🔄 Reset / Clear Filters</option>
+                        </select>
+                    </div>
+                </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="inp-focus-vol-ratio">💧 Min Vol Ratio %</label>
-                        <input type="number" id="inp-focus-vol-ratio" value="200" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                        <input type="number" id="inp-focus-vol-ratio" value="100" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="inp-focus-severity">⚠️ Min Severity</label>
                         <select id="inp-focus-severity" onchange="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; cursor: pointer;">
-                            <option value="CRITICAL" selected>CRITICAL</option>
+                            <option value="CRITICAL">CRITICAL</option>
                             <option value="HIGH">HIGH and above</option>
                             <option value="MEDIUM">MEDIUM and above</option>
-                            <option value="INFO">INFO and above</option>
+                            <option value="INFO" selected>INFO and above</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
@@ -2716,6 +2895,7 @@ def generate_dashboard(symbols):
                             <option value="BEARISH_CROSSOVER">BEARISH CROSSOVER</option>
                             <option value="MOMENTUM_START">MOMENTUM START</option>
                             <option value="VOLUME_DRYUP">VOLUME DRYUP</option>
+                            <option value="MACD_INCREASE">MACD INCREASE</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
@@ -2736,6 +2916,32 @@ def generate_dashboard(symbols):
                         </select>
                     </div>
                 </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 16px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-min-rsi">📉 Min RSI</label>
+                        <input type="number" id="inp-focus-min-rsi" value="0" min="0" max="100" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-max-rsi">📈 Max RSI</label>
+                        <input type="number" id="inp-focus-max-rsi" value="100" min="0" max="100" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-min-pcr">⚖️ Min Option PCR</label>
+                        <input type="number" id="inp-focus-min-pcr" value="0.0" step="0.1" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-max-pcr">⚖️ Max Option PCR</label>
+                        <input type="number" id="inp-focus-max-pcr" value="99.0" step="0.1" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-min-oi-chg">📈 Min Futures OI Δ%</label>
+                        <input type="number" id="inp-focus-min-oi-chg" value="-99" step="0.5" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="inp-focus-max-oi-chg">📉 Max Futures OI Δ%</label>
+                        <input type="number" id="inp-focus-max-oi-chg" value="999" step="0.5" oninput="renderFocusAlerts()" style="width: 100%; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white;">
+                    </div>
+                </div>
             </div>
             
             <!-- Focus table card -->
@@ -2754,6 +2960,8 @@ def generate_dashboard(symbols):
                                 <th>Volume Ratio %</th>
                                 <th>MACD (15m)</th>
                                 <th>RSI (15m)</th>
+                                <th>Option PCR</th>
+                                <th>Futures OI Δ%</th>
                             </tr>
                         </thead>
                         <tbody id="focus-table-body">
@@ -3826,6 +4034,43 @@ def generate_dashboard(symbols):
 
         let allRecentAlerts = [];
 
+        function applyFocusPreset() {{
+            const preset = document.getElementById('inp-focus-preset').value;
+            if (preset === 'BULLISH_CONFLUENCE') {{
+                document.getElementById('inp-focus-min-rsi').value = 50;
+                document.getElementById('inp-focus-max-rsi').value = 70;
+                document.getElementById('inp-focus-min-pcr').value = 0.0;
+                document.getElementById('inp-focus-max-pcr').value = 0.8;
+                document.getElementById('inp-focus-min-oi-chg').value = 3.0;
+                document.getElementById('inp-focus-max-oi-chg').value = 999;
+                document.getElementById('inp-focus-vol-ratio').value = 100;
+                document.getElementById('inp-focus-type').value = 'BULLISH_CROSSOVER';
+                document.getElementById('inp-focus-severity').value = 'INFO';
+            }} else if (preset === 'BEARISH_CONFLUENCE') {{
+                document.getElementById('inp-focus-min-rsi').value = 50;
+                document.getElementById('inp-focus-max-rsi').value = 70;
+                document.getElementById('inp-focus-min-pcr').value = 0.8;
+                document.getElementById('inp-focus-max-pcr').value = 1.2;
+                document.getElementById('inp-focus-min-oi-chg').value = -999;
+                document.getElementById('inp-focus-max-oi-chg').value = 0.0;
+                document.getElementById('inp-focus-vol-ratio').value = 100;
+                document.getElementById('inp-focus-type').value = 'BEARISH_CROSSOVER';
+                document.getElementById('inp-focus-severity').value = 'INFO';
+            }} else if (preset === 'CLEAR') {{
+                document.getElementById('inp-focus-min-rsi').value = 0;
+                document.getElementById('inp-focus-max-rsi').value = 100;
+                document.getElementById('inp-focus-min-pcr').value = 0.0;
+                document.getElementById('inp-focus-max-pcr').value = 99.0;
+                document.getElementById('inp-focus-min-oi-chg').value = -99;
+                document.getElementById('inp-focus-max-oi-chg').value = 999;
+                document.getElementById('inp-focus-vol-ratio').value = 100;
+                document.getElementById('inp-focus-type').value = 'ALL';
+                document.getElementById('inp-focus-severity').value = 'INFO';
+                document.getElementById('inp-focus-preset').value = 'NONE';
+            }}
+            renderFocusAlerts();
+        }}
+
         function renderFocusAlerts() {{
             const jsonEl = document.getElementById('raw-alerts-json');
             if (jsonEl) {{
@@ -3845,6 +4090,13 @@ def generate_dashboard(symbols):
             const sortCol = document.getElementById('inp-focus-sort-col').value;
             const sortOrder = document.getElementById('inp-focus-sort-order').value;
             
+            const minRsi = parseFloat(document.getElementById('inp-focus-min-rsi').value) || 0;
+            const maxRsi = parseFloat(document.getElementById('inp-focus-max-rsi').value) || 100;
+            const minPcr = parseFloat(document.getElementById('inp-focus-min-pcr').value) || 0;
+            const maxPcr = parseFloat(document.getElementById('inp-focus-max-pcr').value) || 99;
+            const minOiChg = parseFloat(document.getElementById('inp-focus-min-oi-chg').value) || -999;
+            const maxOiChg = parseFloat(document.getElementById('inp-focus-max-oi-chg').value) || 999;
+            
             const severityOrder = {{ 'INFO': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 }};
             const minSevLevel = severityOrder[minSeverity] || 1;
             
@@ -3860,6 +4112,16 @@ def generate_dashboard(symbols):
                 if (aSevLevel < minSevLevel) return false;
                 
                 if (alertTypeFilter !== 'ALL' && a.alert_type !== alertTypeFilter) return false;
+                
+                // Mined pattern parameters filtering
+                const rsi = a.rsi !== null && a.rsi !== undefined ? a.rsi : 50;
+                if (rsi < minRsi || rsi > maxRsi) return false;
+                
+                const pcr = a.pcr !== null && a.pcr !== undefined ? a.pcr : 1.0;
+                if (pcr < minPcr || pcr > maxPcr) return false;
+                
+                const oiChg = a.futures_oi_change_pct !== null && a.futures_oi_change_pct !== undefined ? a.futures_oi_change_pct : 0.0;
+                if (oiChg < minOiChg || oiChg > maxOiChg) return false;
                 
                 return true;
             }});
@@ -3897,7 +4159,7 @@ def generate_dashboard(symbols):
             }});
             
             if (filtered.length === 0) {{
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 40px; color: var(--text-muted);">No important alerts match the selected criteria. Try adjusting the thresholds.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 40px; color: var(--text-muted);">No important alerts match the selected criteria. Try adjusting the thresholds.</td></tr>';
                 return;
             }}
             
@@ -3910,6 +4172,10 @@ def generate_dashboard(symbols):
                 const avgVol = a.average_volume;
                 const ratio = (vol && avgVol && avgVol > 0) ? ((vol / avgVol) * 100) : 0;
                 
+                const pcrVal = a.pcr !== null && a.pcr !== undefined ? a.pcr.toFixed(3) : '—';
+                const oiChgVal = a.futures_oi_change_pct !== null && a.futures_oi_change_pct !== undefined ? a.futures_oi_change_pct.toFixed(2) + '%' : '—';
+                const oiColor = a.futures_oi_change_pct > 0 ? '#10b981' : a.futures_oi_change_pct < 0 ? '#ef4444' : '#cbd5e1';
+                
                 htmlRows += `
                 <tr>
                     <td>${{a.timestamp}}</td>
@@ -3918,9 +4184,11 @@ def generate_dashboard(symbols):
                     <td><span style="color: ${{sevColor}}; font-weight: bold; background: ${{sevColor}}18; padding: 2px 8px; border-radius: 12px; font-size: 11px;">${{a.severity}}</span></td>
                     <td>${{a.alert_type}}</td>
                     <td style="color: #cbd5e1;">${{a.message}}</td>
-                    <td style="font-weight: bold; color: ${{ratio >= 200 ? '#10b981' : '#fbbf24'}}">${{ratio.toFixed(1)}}%</td>
+                    <td style="font-weight: bold; color: ${{ratio >= 100 ? '#10b981' : '#fbbf24'}}">${{ratio.toFixed(1)}}%</td>
                     <td>${{a.macd_line.toFixed(3)}}</td>
                     <td>${{rsiStr}}</td>
+                    <td>${{pcrVal}}</td>
+                    <td style="font-weight: bold; color: ${{oiColor}};">${{oiChgVal}}</td>
                 </tr>
                 `;
             }});
